@@ -1,0 +1,311 @@
+/**
+ * Service d'authentification Google OAuth via Supabase
+ * Gère la connexion/inscription avec Google et la récupération des données utilisateur
+ */
+
+import * as WebBrowser from 'expo-web-browser';
+import { supabase } from './supabase';
+import Constants from 'expo-constants';
+
+// Configurer WebBrowser pour gérer correctement les redirects OAuth
+WebBrowser.maybeCompleteAuthSession();
+
+/**
+ * Interface pour la réponse de l'authentification Google
+ */
+export interface GoogleAuthResponse {
+  user: any | null;
+  session: any | null;
+  error: any | null;
+  profileData?: {
+    name: string | null;
+    avatarUrl: string | null;
+    email: string | null;
+  };
+}
+
+/**
+ * Authentification avec Google OAuth
+ * Fonctionne pour sign in et sign up automatiquement
+ * 
+ * @returns Promise<GoogleAuthResponse> - Utilisateur, session, erreur et données de profil
+ */
+export async function signInWithGoogle(): Promise<GoogleAuthResponse> {
+  console.log('🔐 [Google Auth] Démarrage de l\'authentification Google...');
+
+  try {
+    // Construire l'URL de redirection vers la route de callback
+    const redirectUrl = Constants.expoConfig?.scheme 
+      ? `${Constants.expoConfig.scheme}://auth-callback`
+      : 'oshii://auth-callback';
+
+    // Démarrer le flux OAuth avec Google
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: false,
+      },
+    });
+
+    if (error) {
+      console.error('❌ [Google Auth] Erreur lors de l\'initialisation OAuth:', error);
+      return {
+        user: null,
+        session: null,
+        error,
+      };
+    }
+
+    if (!data?.url) {
+      console.error('❌ [Google Auth] URL OAuth non reçue');
+      return {
+        user: null,
+        session: null,
+        error: { message: 'URL OAuth non disponible' },
+      };
+    }
+
+    // Ouvrir le navigateur pour l'authentification
+    console.log('🔗 [Google Auth] Ouverture du navigateur pour l\'authentification...');
+    console.log('🔗 [Google Auth] Redirect URL:', redirectUrl);
+    console.log('🔗 [Google Auth] OAuth URL:', data.url);
+    
+    const result = await WebBrowser.openAuthSessionAsync(
+      data.url,
+      redirectUrl
+    );
+
+    console.log('📱 [Google Auth] Résultat du navigateur:', result.type);
+
+    if (result.type === 'success') {
+      console.log('✅ [Google Auth] Callback URL reçue:', result.url);
+      
+      // Extraire les tokens depuis l'URL de callback
+      // Supabase peut utiliser soit les query params soit le hash
+      const callbackUrl = result.url;
+      let accessToken: string | null = null;
+      let refreshToken: string | null = null;
+      let type: string | null = null;
+
+      try {
+        // Essayer de parser l'URL
+        const url = new URL(callbackUrl);
+        
+        // Chercher dans les query params
+        accessToken = url.searchParams.get('access_token');
+        refreshToken = url.searchParams.get('refresh_token');
+        type = url.searchParams.get('type');
+
+        // Si pas trouvé dans les query params, chercher dans le hash
+        if (!accessToken && url.hash) {
+          const hashParams = new URLSearchParams(url.hash.substring(1));
+          accessToken = hashParams.get('access_token');
+          refreshToken = hashParams.get('refresh_token');
+          type = hashParams.get('type');
+        }
+
+        console.log('🔑 [Google Auth] Tokens extraits:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          type,
+        });
+
+        if (!accessToken || !refreshToken) {
+          console.error('❌ [Google Auth] Tokens manquants dans l\'URL de callback');
+          return {
+            user: null,
+            session: null,
+            error: { message: 'Tokens non trouvés dans l\'URL de callback' },
+          };
+        }
+
+        // Créer la session avec les tokens
+        console.log('🔐 [Google Auth] Création de la session avec les tokens...');
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          console.error('❌ [Google Auth] Erreur lors de la création de la session:', sessionError);
+          return {
+            user: null,
+            session: null,
+            error: sessionError,
+          };
+        }
+
+        if (!sessionData.session || !sessionData.user) {
+          console.error('❌ [Google Auth] Session ou utilisateur non disponible après setSession');
+          return {
+            user: null,
+            session: null,
+            error: { message: 'Session non créée correctement' },
+          };
+        }
+
+        console.log('✅ [Google Auth] Session créée avec succès');
+        console.log('👤 [Google Auth] Utilisateur:', sessionData.user.email);
+
+        // Récupérer les données de profil Google
+        console.log('📋 [Google Auth] Extraction des données de profil...');
+        const profileData = await extractGoogleProfileData(sessionData.user);
+
+        // Créer ou mettre à jour le profil dans Supabase
+        console.log('💾 [Google Auth] Mise à jour du profil...');
+        await updateUserProfile(sessionData.user, profileData);
+
+        console.log('✅ [Google Auth] Authentification Google complétée avec succès');
+
+        return {
+          user: sessionData.user,
+          session: sessionData.session,
+          error: null,
+          profileData,
+        };
+      } catch (parseError: any) {
+        console.error('❌ [Google Auth] Erreur lors du parsing de l\'URL:', parseError);
+        console.error('❌ [Google Auth] URL complète:', callbackUrl);
+        return {
+          user: null,
+          session: null,
+          error: { message: `Erreur de parsing: ${parseError.message}` },
+        };
+      }
+    } else if (result.type === 'cancel') {
+      console.log('⚠️ [Google Auth] Authentification annulée par l\'utilisateur');
+      return {
+        user: null,
+        session: null,
+        error: { message: 'Authentification annulée' },
+      };
+    } else {
+      console.log('⚠️ [Google Auth] Type de résultat inattendu:', result.type);
+      return {
+        user: null,
+        session: null,
+        error: { message: 'Échec de l\'authentification' },
+      };
+    }
+  } catch (error: any) {
+    console.error('❌ [Google Auth] Erreur inattendue:', error);
+    return {
+      user: null,
+      session: null,
+      error: error.message || error,
+    };
+  }
+}
+
+/**
+ * Extraire les données de profil depuis l'utilisateur Google
+ * 
+ * @param user - Objet utilisateur de Supabase
+ * @returns Données de profil (nom, avatar, email)
+ */
+async function extractGoogleProfileData(user: any): Promise<{
+  name: string | null;
+  avatarUrl: string | null;
+  email: string | null;
+}> {
+  try {
+    // Les données Google sont dans user_metadata ou app_metadata
+    const userMetadata = user.user_metadata || {};
+
+    const name = 
+      userMetadata.full_name || 
+      userMetadata.name ||
+      `${userMetadata.first_name || ''} ${userMetadata.last_name || ''}`.trim() ||
+      user.email?.split('@')[0] ||
+      null;
+
+    const avatarUrl = 
+      userMetadata.avatar_url || 
+      userMetadata.picture ||
+      null;
+
+    const email = user.email || null;
+
+    console.log('📋 [Google Auth] Données de profil extraites:', { name, email, hasAvatar: !!avatarUrl });
+
+    return {
+      name,
+      avatarUrl,
+      email,
+    };
+  } catch (error) {
+    console.error('❌ [Google Auth] Erreur lors de l\'extraction du profil:', error);
+    return {
+      name: null,
+      avatarUrl: null,
+      email: null,
+    };
+  }
+}
+
+/**
+ * Créer ou mettre à jour le profil utilisateur dans la table profiles
+ * 
+ * @param user - Objet utilisateur de Supabase
+ * @param profileData - Données de profil à enregistrer
+ */
+async function updateUserProfile(
+  user: any,
+  profileData: { name: string | null; avatarUrl: string | null; email: string | null }
+): Promise<void> {
+  try {
+    if (!user?.id) {
+      console.warn('⚠️ [Google Auth] ID utilisateur manquant pour la mise à jour du profil');
+      return;
+    }
+
+    // Vérifier si le profil existe déjà
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    const profileUpdate: {
+      id: string;
+      username?: string;
+      avatar_url?: string;
+      onboarding_completed?: boolean;
+    } = {
+      id: user.id,
+    };
+
+    // Mettre à jour le username si disponible et pas déjà défini
+    if (profileData.name && (!existingProfile?.username || existingProfile.username === user.email?.split('@')[0])) {
+      profileUpdate.username = profileData.name;
+    }
+
+    // Mettre à jour l'avatar si disponible
+    if (profileData.avatarUrl) {
+      profileUpdate.avatar_url = profileData.avatarUrl;
+    }
+
+    // Si nouveau profil, onboarding_completed reste false
+    // Si profil existant, conserver la valeur actuelle
+    if (!existingProfile) {
+      profileUpdate.onboarding_completed = false;
+    }
+
+    // Upsert le profil
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(profileUpdate, {
+        onConflict: 'id',
+      });
+
+    if (profileError) {
+      console.error('❌ [Google Auth] Erreur lors de la mise à jour du profil:', profileError);
+    } else {
+      console.log('✅ [Google Auth] Profil mis à jour avec succès');
+    }
+  } catch (error) {
+    console.error('❌ [Google Auth] Erreur lors de la mise à jour du profil:', error);
+  }
+}
+
