@@ -13,14 +13,20 @@ import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Clipboard as ClipboardIcon, Sparkles, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 
 interface AnalyzeSheetProps {
@@ -37,6 +43,40 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { isPremium, profile, canGenerateRecipe } = useAuthContext();
+  const shiftAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const handleShow = (event: KeyboardEvent) => {
+      const keyboardHeight = event?.endCoordinates?.height ?? 0;
+      const offset = Math.min(keyboardHeight * 0.45, 180);
+
+      Animated.timing(shiftAnim, {
+        toValue: -offset,
+        duration: event?.duration ?? 240,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const handleHide = (event: KeyboardEvent) => {
+      Animated.timing(shiftAnim, {
+        toValue: 0,
+        duration: event?.duration ?? 200,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const subscriptions = [
+      Keyboard.addListener(showEvent, handleShow),
+      Keyboard.addListener(hideEvent, handleHide),
+    ];
+
+    return () => {
+      subscriptions.forEach((sub) => sub.remove());
+    };
+  }, [shiftAnim]);
 
   const handleAnalyze = () => {
     if (!url || url.trim().length === 0) {
@@ -67,6 +107,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
   };
 
   const handleClose = () => {
+    Keyboard.dismiss();
     setUrl('');
     setError(null);
     onClose();
@@ -94,25 +135,36 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerSpacer} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Nouvelle recette
-          </Text>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.touchableArea}>
+          <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 32 : 0}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerSpacer} />
+              <Text style={[styles.headerTitle, { color: colors.text }]}> 
+                Nouvelle recette
+              </Text>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
 
-        {/* Content */}
-        <View style={styles.content}>
+            {/* Content */}
+            <Animated.View
+              pointerEvents="box-none"
+              style={[styles.animatedContent, { transform: [{ translateY: shiftAnim }] }]}
+            >
+              <View style={styles.content}>
           {/* Cards avec logos superposés */}
           <View style={styles.logosContainer}>
             {/* Carte TikTok (background, rotation horaire) */}
-            <View style={[styles.logoCard, styles.tiktokCard, { backgroundColor: colors.card, overflow: 'hidden' }]}>
-              <ExpoImage
+            <View style={[styles.logoCard, styles.tiktokCard, { backgroundColor: colors.card, overflow: 'hidden' }]}
+            >
+  <ExpoImage
                 source={require('@/assets/logo/Tiktoklogo.jpg')}
                 style={styles.tiktokLogo}
                 contentFit="cover"
@@ -188,8 +240,11 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
               loading={isLoading}
             />
           </View>
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -198,20 +253,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  touchableArea: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.md,
-  },
-  closeButton: {
-    padding: Spacing.xs,
+    zIndex: 10,
+    elevation: 2,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.full,
   },
   headerSpacer: {
     width: 40,
@@ -221,10 +285,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
   },
+  animatedContent: {
+    flex: 1,
+  },
   logosContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-
     height: 260,
     position: 'relative',
   },
@@ -235,7 +301,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
-
     elevation: 10,
     opacity: 0.97,
   },

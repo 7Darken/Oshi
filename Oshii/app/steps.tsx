@@ -3,28 +3,27 @@
  * Affichage horizontal scrollable des étapes
  */
 
-import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Dimensions,
-  StatusBar,
-  ScrollView,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, Thermometer } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useRecipeStore } from '@/stores/useRecipeStore';
-import { supabase } from '@/services/supabase';
-import { FullRecipe } from '@/hooks/useRecipes';
-import { Ingredient } from '@/types/recipe';
-import { Step as StepType } from '@/types/recipe';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { FullRecipe } from '@/hooks/useRecipes';
+import { supabase } from '@/services/supabase';
+import { useRecipeStore } from '@/stores/useRecipeStore';
+import { Ingredient, Step as StepType } from '@/types/recipe';
+import { Image as ExpoImage } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Clock, Thermometer } from 'lucide-react-native';
+import React, { useCallback, useMemo } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - (Spacing.lg * 2);
@@ -318,7 +317,6 @@ export default function StepsScreen() {
           {/* Indicateur de progression */}
           {index < sortedStepsWithIngredients.length - 1 && (
             <View style={styles.progressIndicator}>
-              <View style={[styles.progressLine, { backgroundColor: colors.border }]} />
               <Text style={[styles.nextStepText, { color: colors.icon }]}>
                 Étape {item.order + 1} →
               </Text>
@@ -597,7 +595,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressLine: {
-    width: 2,
+
     height: 40,
     marginBottom: Spacing.xs,
   },

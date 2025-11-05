@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { X } from 'lucide-react-native';
@@ -139,23 +140,41 @@ export function SearchBarWithTags({
         />
       </View>
 
-      {/* Tags des food_items sélectionnés */}
-      {selectedFoodItems.length > 0 && (
-        <View style={styles.tagsContainer}>
-          {selectedFoodItems.map(renderTag)}
-        </View>
-      )}
+      <View
+        style={[
+          styles.tagsWrapper,
+          !(selectedFoodItems.length > 0 || (showSuggestions && suggestions.length > 0)) && { marginTop: 0 },
+        ]}
+      >
+        {/* Tags des food_items sélectionnés */}
+        {selectedFoodItems.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {selectedFoodItems.map(renderTag)}
+          </View>
+        )}
 
-      {/* Suggestions */}
-      {showSuggestions && suggestions.length > 0 && (
-        <View style={[styles.suggestionsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {suggestions.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {renderSuggestion({ item, index })}
-            </React.Fragment>
-          ))}
-        </View>
-      )}
+        {/* Suggestions */}
+        {showSuggestions && suggestions.length > 0 && (
+          <View
+            style={[
+              styles.suggestionsContainer,
+              styles.suggestionsOverlay,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {suggestions.map((item, index) => (
+                <React.Fragment key={item.id}>
+                  {renderSuggestion({ item, index })}
+                </React.Fragment>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -163,6 +182,10 @@ export function SearchBarWithTags({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.md,
+  },
+  tagsWrapper: {
+    position: 'relative',
+    marginTop: Spacing.sm,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -215,6 +238,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxHeight: 200,
     overflow: 'hidden',
+  },
+  suggestionsOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    marginTop: 0,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 8,
   },
   suggestionItem: {
     flexDirection: 'row',

@@ -3,8 +3,10 @@
  * Récupération et gestion via Supabase
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/services/supabase';
+import * as Haptics from 'expo-haptics';
 
 export interface ShoppingListItem {
   id: string;
@@ -18,16 +20,20 @@ export interface ShoppingListItem {
   food_item_id: string | null;
 }
 
+type FetchOptions = {
+  silent?: boolean;
+};
+
 export interface UseShoppingListReturn {
   items: ShoppingListItem[];
   isLoading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: (options?: FetchOptions) => Promise<void>;
   toggleItem: (itemId: string) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
   deleteAllCheckedItems: () => Promise<void>;
   addItem: (ingredient: { name: string; quantity?: string; unit?: string }) => Promise<void>;
-  addFoodItems: (foodItems: Array<{ id: string; name: string }>) => Promise<void>;
+  addFoodItems: (foodItems: { id: string; name: string }[]) => Promise<void>;
 }
 
 /**
@@ -38,16 +44,37 @@ export function useShoppingList(): UseShoppingListReturn {
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
-  const fetchShoppingList = useCallback(async () => {
+  const ensureUserId = useCallback(async () => {
+    if (userIdRef.current) {
+      return userIdRef.current;
+    }
+
+    const { data, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !data?.user?.id) {
+      console.error('❌ [ShoppingList] Impossible de récupérer l\'utilisateur:', userError);
+      throw new Error('Utilisateur non authentifié');
+    }
+
+    userIdRef.current = data.user.id;
+    return data.user.id;
+  }, []);
+
+  const fetchShoppingList = useCallback(async (options: FetchOptions = {}) => {
     console.log('🛒 [ShoppingList] Récupération de la liste de courses...');
-    setIsLoading(true);
+    if (!options.silent) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
+      const userId = await ensureUserId();
       const { data: itemsData, error: itemsError } = await supabase
         .from('shopping_list_items')
-        .select('*')
+        .select('id, user_id, ingredient_name, quantity, unit, checked, created_at, updated_at, food_item_id')
+        .eq('user_id', userId)
         .order('checked', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -64,7 +91,7 @@ export function useShoppingList(): UseShoppingListReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [ensureUserId]);
 
   const toggleItem = useCallback(async (itemId: string) => {
     const item = items.find((i) => i.id === itemId);
@@ -73,10 +100,12 @@ export function useShoppingList(): UseShoppingListReturn {
     console.log('🔄 [ShoppingList] Toggle item:', item.ingredient_name);
     
     try {
+      const userId = await ensureUserId();
       const { error: updateError } = await supabase
         .from('shopping_list_items')
         .update({ checked: !item.checked })
-        .eq('id', itemId);
+        .eq('id', itemId)
+        .eq('user_id', userId);
 
       if (updateError) {
         console.error('❌ [ShoppingList] Erreur lors de la mise à jour:', updateError);
@@ -84,20 +113,25 @@ export function useShoppingList(): UseShoppingListReturn {
       }
 
       console.log('✅ [ShoppingList] Item mis à jour');
-      await fetchShoppingList();
+      if (!item.checked && Platform.OS === 'ios') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      await fetchShoppingList({ silent: true });
     } catch (err: any) {
       console.error('❌ [ShoppingList] Erreur:', err);
     }
-  }, [items, fetchShoppingList]);
+  }, [ensureUserId, items, fetchShoppingList]);
 
   const deleteItem = useCallback(async (itemId: string) => {
     console.log('🗑️ [ShoppingList] Suppression item:', itemId);
 
     try {
+      const userId = await ensureUserId();
       const { error: deleteError } = await supabase
         .from('shopping_list_items')
         .delete()
-        .eq('id', itemId);
+        .eq('id', itemId)
+        .eq('user_id', userId);
 
       if (deleteError) {
         console.error('❌ [ShoppingList] Erreur lors de la suppression:', deleteError);
@@ -105,20 +139,22 @@ export function useShoppingList(): UseShoppingListReturn {
       }
 
       console.log('✅ [ShoppingList] Item supprimé');
-      await fetchShoppingList();
+      await fetchShoppingList({ silent: true });
     } catch (err: any) {
       console.error('❌ [ShoppingList] Erreur:', err);
     }
-  }, [fetchShoppingList]);
+  }, [ensureUserId, fetchShoppingList]);
 
   const deleteAllCheckedItems = useCallback(async () => {
     console.log('🗑️ [ShoppingList] Suppression de tous les items cochés');
 
     try {
+      const userId = await ensureUserId();
       const { error: deleteError } = await supabase
         .from('shopping_list_items')
         .delete()
-        .eq('checked', true);
+        .eq('checked', true)
+        .eq('user_id', userId);
 
       if (deleteError) {
         console.error('❌ [ShoppingList] Erreur lors de la suppression:', deleteError);
@@ -126,20 +162,22 @@ export function useShoppingList(): UseShoppingListReturn {
       }
 
       console.log('✅ [ShoppingList] Tous les items cochés supprimés');
-      await fetchShoppingList();
+      await fetchShoppingList({ silent: true });
     } catch (err: any) {
       console.error('❌ [ShoppingList] Erreur:', err);
       throw err;
     }
-  }, [fetchShoppingList]);
+  }, [ensureUserId, fetchShoppingList]);
 
   const addItem = useCallback(async (ingredient: { name: string; quantity?: string; unit?: string }) => {
     console.log('➕ [ShoppingList] Ajout item:', ingredient.name);
 
     try {
+      const userId = await ensureUserId();
       const { error: insertError } = await supabase
         .from('shopping_list_items')
         .insert({
+          user_id: userId,
           ingredient_name: ingredient.name,
           quantity: ingredient.quantity || null,
           unit: ingredient.unit || null,
@@ -152,28 +190,24 @@ export function useShoppingList(): UseShoppingListReturn {
       }
 
       console.log('✅ [ShoppingList] Item ajouté');
-      await fetchShoppingList();
+      await fetchShoppingList({ silent: true });
     } catch (err: any) {
       console.error('❌ [ShoppingList] Erreur:', err);
     }
-  }, [fetchShoppingList]);
+  }, [ensureUserId, fetchShoppingList]);
 
-  const addFoodItems = useCallback(async (foodItems: Array<{ id: string; name: string }>) => {
+  const addFoodItems = useCallback(async (foodItems: { id: string; name: string }[]) => {
     console.log('➕ [ShoppingList] Ajout de', foodItems.length, 'food_items');
 
     try {
-      // 1. Récupérer l'utilisateur actuel
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('❌ [ShoppingList] Erreur lors de la récupération de l\'utilisateur:', userError);
-        throw new Error('Utilisateur non authentifié');
-      }
+      const userId = await ensureUserId();
 
       // 2. Récupérer la liste actuelle de courses (unchecked)
       const { data: currentItems, error: fetchError } = await supabase
         .from('shopping_list_items')
         .select('*')
-        .eq('checked', false);
+        .eq('checked', false)
+        .eq('user_id', userId);
 
       if (fetchError) {
         console.error('❌ [ShoppingList] Erreur lors de la récupération:', fetchError);
@@ -192,7 +226,7 @@ export function useShoppingList(): UseShoppingListReturn {
         // Ne pas ajouter si l'item existe déjà
         if (!existingItem) {
           itemsToInsert.push({
-            user_id: user.id,
+            user_id: userId,
             ingredient_name: foodItem.name,
             food_item_id: foodItem.id,
             checked: false,
@@ -213,12 +247,12 @@ export function useShoppingList(): UseShoppingListReturn {
       }
 
       console.log('✅ [ShoppingList]', itemsToInsert.length, 'items ajoutés');
-      await fetchShoppingList();
+      await fetchShoppingList({ silent: true });
     } catch (err: any) {
       console.error('❌ [ShoppingList] Erreur:', err);
       throw err;
     }
-  }, [fetchShoppingList]);
+  }, [ensureUserId, fetchShoppingList]);
 
   useEffect(() => {
     fetchShoppingList();

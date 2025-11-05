@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, ImageStyle } from 'react-native';
+import { ImageStyle } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 
 interface OshiiLogoProps {
@@ -24,20 +24,9 @@ export function OshiiLogo({ size = 'md', style }: OshiiLogoProps) {
   return (
     <ExpoImage
       source={require('@/assets/logo/OshiiAppLogo.png')}
-      style={[
-        styles.logo,
-        { width: sizeValue, height: sizeValue },
-        style,
-      ]}
-      contentFit="contain"
+      style={[{ width: sizeValue, height: sizeValue }, style]}
+      contentFit="cover"
       transition={200}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  logo: {
-    resizeMode: 'contain',
-  },
-});
-

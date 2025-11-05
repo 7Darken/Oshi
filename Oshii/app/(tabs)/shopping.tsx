@@ -2,7 +2,7 @@
  * Onglet Shopping List - Liste de courses de l'utilisateur
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { AddFoodItemsSheet } from '@/components/AddFoodItemsSheet';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useFoodItems } from '@/hooks/useFoodItems';
 import { FoodItem } from '@/stores/useFoodItemsStore';
+import { useFocusEffect } from 'expo-router';
 
 export default function ShoppingScreen() {
   const [showAddSheet, setShowAddSheet] = React.useState(false);
@@ -31,6 +32,14 @@ export default function ShoppingScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { items, isLoading, error, refresh, toggleItem, deleteItem, deleteAllCheckedItems, addFoodItems } = useShoppingList();
   const { getFoodItemImage } = useFoodItems();
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh({ silent: true }).catch((err) => {
+        console.error('❌ [Shopping] Erreur lors du refresh:', err);
+      });
+    }, [refresh])
+  );
 
   const handleToggle = async (itemId: string) => {
     await toggleItem(itemId);

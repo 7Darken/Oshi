@@ -22,6 +22,7 @@ import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
 import { TutorialSheet } from '@/components/TutorialSheet';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 interface SettingsSheetProps {
   visible: boolean;
@@ -38,6 +39,10 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const appName = Constants?.expoConfig?.name ?? 'Oshii';
+  const appVersion = Constants?.expoConfig?.version ?? '1.0.0';
+  const appTagline = 'Vos recettes, simplifiées';
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -111,8 +116,11 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
       icon: Info,
       description: 'Informations sur l\'application',
       onPress: () => {
-        // TODO: Implémenter la page À propos
-        console.log('À propos');
+        Alert.alert(
+          appName,
+          `Version ${appVersion}\n${appTagline}`,
+          [{ text: 'OK', style: 'default' }],
+        );
       },
     },
   ];

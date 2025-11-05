@@ -1,8 +1,11 @@
+import React, { useCallback, useEffect, useState } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
+import { View, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -134,11 +137,38 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [rootViewReady, setRootViewReady] = useState(false);
+
+  useEffect(() => {
+    SplashScreen.preventAutoHideAsync().catch(() => {
+      // Ignore errors (already hidden)
+    });
+  }, []);
+
+  useEffect(() => {
+    if (rootViewReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [rootViewReady]);
+
+  const onLayoutRootView = useCallback(() => {
+    setRootViewReady(true);
+  }, []);
+
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <View style={styles.root} onLayout={onLayoutRootView}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+});

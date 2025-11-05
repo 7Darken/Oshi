@@ -2,22 +2,22 @@
  * Écran de sélection de plan d'abonnement
  */
 
-import React, { useState, useEffect } from 'react';
+import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRevenueCat } from '@/hooks/useRevenueCat';
+import { useRouter } from 'expo-router';
+import { Check, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Linking,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { X, Check } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { OshiiLogo } from '@/components/ui/OshiiLogo';
-import { useRevenueCat } from '@/hooks/useRevenueCat';
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -44,8 +44,8 @@ export default function SubscriptionScreen() {
   const features = [
     'Recettes illimitées',
     'Analyse vidéo prioritaire',
-    'Export de vos recettes en PDF',
-    'Support client premium',
+    'Export de vos recettes en Image',
+    'Partagez vos recettes préférées',
     'Accès aux fonctionnalités bêta',
   ];
 

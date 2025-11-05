@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -59,7 +59,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B72A65AE2EB8CF8E00425F98 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		B72A65AE2EB8CF8E00425F98 /* Exceptions for "ShareFromTikTok" folder in "ShareFromTikTok" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -69,7 +69,18 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B72A65A12EB8CF8E00425F98 /* ShareFromTikTok */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B72A65AE2EB8CF8E00425F98 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShareFromTikTok; sourceTree = "<group>"; };
+		B72A65A12EB8CF8E00425F98 /* ShareFromTikTok */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B72A65AE2EB8CF8E00425F98 /* Exceptions for "ShareFromTikTok" folder in "ShareFromTikTok" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ShareFromTikTok;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */

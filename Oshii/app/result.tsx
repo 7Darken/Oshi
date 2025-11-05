@@ -3,34 +3,41 @@
  * Affiche la recette complète avec ingrédients, étapes, métadonnées et lien TikTok
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Linking,
-  TouchableOpacity,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Clock, Users, ArrowLeft, Share2, Folder, ShoppingCart, Minus, Plus, Bookmark, Play } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { IngredientCard } from '@/components/ui/IngredientCard';
-import { StepRow } from '@/components/ui/StepRow';
-import { MacroCircle } from '@/components/ui/MacroCircle';
-import { FolderSelectorSheet } from '@/components/FolderSelectorSheet';
-import { SelectIngredientsSheet } from '@/components/SelectIngredientsSheet';
 import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
-import { useRecipeStore } from '@/stores/useRecipeStore';
+import { FolderSelectorSheet } from '@/components/FolderSelectorSheet';
+import RecipeCardPreviewComponent, { PreviewIngredient, PreviewMacros } from '@/components/RecipeCardPreview';
+import { SelectIngredientsSheet } from '@/components/SelectIngredientsSheet';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { IngredientCard } from '@/components/ui/IngredientCard';
+import { MacroCircle } from '@/components/ui/MacroCircle';
+import { StepRow } from '@/components/ui/StepRow';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { supabase } from '@/services/supabase';
-import { FullRecipe } from '@/hooks/useRecipes';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { FullRecipe } from '@/hooks/useRecipes';
+import { supabase } from '@/services/supabase';
+import { useRecipeStore } from '@/stores/useRecipeStore';
+import { Image as ExpoImage } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import { ArrowLeft, Bookmark, Clock, Flame, Folder, Minus, Play, Plus, Share2, ShoppingCart, Users } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Animated,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { captureRef } from 'react-native-view-shot';
+
+const HERO_IMAGE_HEIGHT = 400;
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -38,9 +45,11 @@ export default function ResultScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { currentRecipe } = useRecipeStore();
-  const { user } = useAuthContext();
+  const { user, isPremium } = useAuthContext();
   const { getFoodItemImage } = useFoodItems();
-  
+  const previewRef = useRef<View | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+
   const [dbRecipe, setDbRecipe] = useState<FullRecipe | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Commencer en loading si recipeId
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +62,28 @@ export default function ResultScreen() {
   const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroTranslateY = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [-150, 0, 150],
+        outputRange: [-30, 0, -20],
+        extrapolate: 'clamp',
+      }),
+    [scrollY]
+  );
+
+  const heroScale = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [-150, 0, 150],
+        outputRange: [1.05, 1, 0.97],
+        extrapolate: 'clamp',
+      }),
+    [scrollY]
+  );
 
   // Charger la recette depuis Supabase si recipeId est fourni
   useEffect(() => {
@@ -223,6 +254,71 @@ export default function ResultScreen() {
     setCurrentPortions((prev) => Math.min(15, prev + 1));
   }, []);
 
+  const previewIngredients = useMemo<PreviewIngredient[]>(() => {
+    if (!adjustedIngredients) {
+      return [];
+    }
+
+    return adjustedIngredients.map((item) => ({
+      name: item.name,
+      quantity: item.quantity ?? null,
+      unit: item.unit ?? null,
+    }));
+  }, [adjustedIngredients]);
+
+  const previewMacros = useMemo<PreviewMacros | null>(() => {
+    if (!adjustedMacros) {
+      return null;
+    }
+
+    return {
+      proteins: adjustedMacros.proteins,
+      carbs: adjustedMacros.carbs,
+      fats: adjustedMacros.fats,
+      proteinPercent: adjustedMacros.proteinPercent,
+      carbPercent: adjustedMacros.carbPercent,
+      fatPercent: adjustedMacros.fatPercent,
+    };
+  }, [adjustedMacros]);
+
+  const handleExportRecipePreview = useCallback(async () => {
+    if (!isPremium) {
+      router.push('/subscription');
+      return;
+    }
+
+    if (!previewRef.current || !recipe) {
+      return;
+    }
+
+    try {
+      setIsGeneratingPreview(true);
+      const uri = await captureRef(previewRef.current, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+
+      if (!uri) {
+        throw new Error('Capture échouée');
+      }
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: `Partager ${recipe.title}`,
+          mimeType: 'image/png',
+        });
+      } else {
+        Alert.alert('Partage indisponible', "Le partage n'est pas disponible sur cet appareil.");
+      }
+    } catch (err: any) {
+      console.error('❌ [Result] Export preview error:', err);
+      Alert.alert('Erreur', "Impossible de générer l'image de la recette.");
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  }, [isPremium, recipe, router]);
+
   // Ne rien afficher si en chargement
   if (isLoading || !recipe) {
     return (
@@ -347,11 +443,6 @@ export default function ResultScreen() {
     }
   };
 
-  const handleShare = async () => {
-    // TODO: Implémenter le partage
-    console.log('Partager la recette:', recipe.title);
-  };
-
   const handleBack = () => {
     router.back();
   };
@@ -433,38 +524,58 @@ export default function ResultScreen() {
       setIsUpdatingFolder(false);
     }
   };
-console.log(recipe.steps);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.heroContainer,
+          { transform: [{ translateY: heroTranslateY }, { scale: heroScale }] },
+        ]}
       >
-        {/* Image de la recette */}
-        <View style={styles.imageContainer}>
-          <ExpoImage
-            source={
-              'image_url' in recipe && recipe.image_url
-                ? { uri: recipe.image_url }
-                : require('@/assets/images/icon.png')
-            }
-            style={styles.recipeImage}
-            contentFit="cover"
-            placeholder={require('@/assets/images/icon.png')}
-            transition={200}
-          />
-          
-          {/* Boutons header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <ArrowLeft size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-              <Share2 size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ExpoImage
+          source={
+            'image_url' in recipe && recipe.image_url
+              ? { uri: recipe.image_url }
+              : require('@/assets/images/icon.png')
+          }
+          style={styles.recipeImage}
+          contentFit="cover"
+          placeholder={require('@/assets/images/icon.png')}
+          transition={200}
+        />
+      </Animated.View>
 
+      {/* Boutons header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <ArrowLeft size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleExportRecipePreview}
+          style={[styles.shareButton, isGeneratingPreview && { opacity: 0.6 }]}
+          disabled={isGeneratingPreview}
+          activeOpacity={0.8}
+        >
+          {isGeneratingPreview ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Share2 size={28} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <Animated.ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: HERO_IMAGE_HEIGHT }]}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+      >
         {/* Container avec tout le contenu */}
         <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
           {/* Logo TikTok */}
@@ -536,12 +647,20 @@ console.log(recipe.steps);
           {/* Section Macros */}
           {adjustedMacros && (
             <View style={styles.macroSection}>
-              <Card>
+              <Card style={styles.macroCard}>
+                {recipe?.calories && (
+                  <View style={styles.macrosHeadlineRow}>
+                    <Flame size={18} color={colors.primary} />
+                    <Text style={[styles.macrosHeadline, { color: colors.icon }]}>
+                      {Math.round(recipe.calories * (currentPortions / (recipe.servings || currentPortions)))} kcal
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.macroContainer}>
                   <MacroCircle
                     value={Math.round(adjustedMacros.carbs)}
                     label="Glucides"
-                    color="#4A9EFF"
+                    color="#54C1F9"
                     percentage={adjustedMacros.carbPercent}
                     size={88}
                     textColor={colors.text}
@@ -563,6 +682,25 @@ console.log(recipe.steps);
                     textColor={colors.text}
                   />
                 </View>
+                {!isPremium && (
+                  <BlurView
+                    intensity={40}
+                    tint={colorScheme === 'dark' ? 'dark' : 'light'}
+                    style={styles.macroBlurOverlay}
+                  >
+                    <View style={styles.macroBlurContent}>
+                      <Text style={[styles.macroBlurTitle, { color: colors.text }]}>Oshii Premium</Text>
+                      <Text style={[styles.macroBlurSubtitle, { color: colors.icon }]}>Débloquez l’accès aux macros détaillées</Text>
+                      <TouchableOpacity
+                        style={[styles.macroBlurButton, { backgroundColor: colors.primary }]}
+                        activeOpacity={0.8}
+                        onPress={() => router.push('/subscription')}
+                      >
+                        <Text style={styles.macroBlurButtonText}>Voir les offres</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </BlurView>
+                )}
               </Card>
             </View>
           )}
@@ -708,7 +846,19 @@ console.log(recipe.steps);
 
         {/* Espacement en bas */}
         <View style={styles.bottomSpacer} />
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Prévisualisation hors-écran pour export image */}
+      <View style={styles.previewCapture} pointerEvents="none">
+        <View ref={previewRef} collapsable={false} style={styles.previewContent}>
+          <RecipeCardPreviewComponent
+            recipe={recipe as FullRecipe}
+            ingredients={previewIngredients}
+            macros={previewMacros}
+            portions={currentPortions}
+          />
+        </View>
+      </View>
 
       {/* Footer avec boutons */}
       {recipe && (
@@ -835,6 +985,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -855,19 +1008,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scrollContent: {
-    paddingTop: 0,
+    paddingBottom: Spacing.xxl,
   },
-  imageContainer: {
-    width: '100%',
-    height: 400,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HERO_IMAGE_HEIGHT,
     overflow: 'hidden',
+    backgroundColor: '#000',
   },
   contentContainer: {
-    marginTop: -Spacing.xxl - 10,
+    marginTop: -Spacing.xxl,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     paddingTop: Spacing.xl,
     position: 'relative',
+    paddingBottom: Spacing.xxl,
   },
   tiktokLogoContainer: {
     position: 'absolute',
@@ -896,7 +1054,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: Spacing.xxl,
+    top: Spacing.xxl + Spacing.md,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -906,8 +1064,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   backButton: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 9999,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
@@ -922,8 +1080,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   shareButton: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 9999,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
@@ -965,11 +1123,59 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     paddingHorizontal: Spacing.lg,
   },
+  macroCard: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
   macroContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: Spacing.md,
+  },
+  macroBlurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  macroBlurContent: {
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  macroBlurTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  macroBlurSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  macroBlurButton: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+  },
+  macroBlurButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  macrosHeadlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  macrosHeadline: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textTransform: 'capitalize',
   },
   section: {
     marginBottom: Spacing.lg,
@@ -1166,5 +1372,18 @@ const styles = StyleSheet.create({
   showMoreCount: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  previewCapture: {
+    position: 'absolute',
+    top: -10000,
+    left: -10000,
+    opacity: 0,
+  },
+  previewContent: {
+    width: 1080,
+    maxWidth: 1080,
+    backgroundColor: '#F5F7FA',
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
   },
 });

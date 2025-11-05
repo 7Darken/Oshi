@@ -2,22 +2,22 @@
  * Onglet Profil - Informations utilisateur
  */
 
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { User, Settings, Star, ChevronRight } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuthContext } from '@/contexts/AuthContext';
 import { SettingsSheet } from '@/components/SettingsSheet';
 import { ProfileTypeIcon } from '@/components/ui/ProfileTypeIcon';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { ChevronRight, Settings, Star, User } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -119,7 +119,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.premiumTextContainer}>
                 <Text style={[styles.premiumTitle, { color: colors.text }]}>
-                  Passer à Oshii Premium
+                  Passer à Oshii Pro
                 </Text>
                 <Text style={[styles.premiumSubtitle, { color: colors.icon }]}>
                   Débloquez toutes les fonctionnalités
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   premiumCard: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     marginBottom: Spacing.lg,
   },
   premiumContent: {
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   proCard: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     marginBottom: Spacing.lg,
   },
   proHeader: {
