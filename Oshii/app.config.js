@@ -54,6 +54,8 @@ export default {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
       BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:3000',
+      REVENUECAT_IOS_API_KEY: process.env.REVENUECAT_IOS_API_KEY,
+      REVENUECAT_ANDROID_API_KEY: process.env.REVENUECAT_ANDROID_API_KEY,
     },
   },
 };

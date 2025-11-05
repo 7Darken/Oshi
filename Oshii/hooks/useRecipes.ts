@@ -71,10 +71,14 @@ export function useRecipes(): UseRecipesReturn {
     }
 
     try {
-      // 1. Récupérer les recettes de l'utilisateur
+      // Récupérer les recettes avec leurs ingrédients et étapes en une seule requête (optimisé)
       const { data: recipesData, error: recipesError } = await supabase
         .from('recipes')
-        .select('*')
+        .select(`
+          *,
+          ingredients(*),
+          steps(*)
+        `)
         .order('created_at', { ascending: false });
 
       if (recipesError) {
@@ -102,30 +106,17 @@ export function useRecipes(): UseRecipesReturn {
         console.log('✅ [Recipes]', recipesData.length, 'recettes trouvées');
       }
 
-      // 2. Pour chaque recette, récupérer les ingrédients et étapes
-      const fullRecipes = await Promise.all(
-        recipesData.map(async (recipe) => {
-          // Récupérer les ingrédients
-          const { data: ingredients } = await supabase
-            .from('ingredients')
-            .select('*')
-            .eq('recipe_id', recipe.id)
-            .order('name');
-
-          // Récupérer les étapes
-          const { data: steps } = await supabase
-            .from('steps')
-            .select('*')
-            .eq('recipe_id', recipe.id)
-            .order('order');
-
-          return {
-            ...recipe,
-            ingredients: ingredients || [],
-            steps: steps || [],
-          };
-        })
-      );
+      // Transformer les données pour correspondre au format attendu
+      // Les jointures Supabase retournent ingredients et steps comme arrays
+      const fullRecipes = recipesData.map((recipe: any) => ({
+        ...recipe,
+        ingredients: (recipe.ingredients || []).sort((a: any, b: any) => 
+          (a.name || '').localeCompare(b.name || '')
+        ),
+        steps: (recipe.steps || []).sort((a: any, b: any) => 
+          (a.order || 0) - (b.order || 0)
+        ),
+      }));
 
       if (!silent) {
         console.log('✅ [Recipes] Recettes complètes récupérées avec succès');

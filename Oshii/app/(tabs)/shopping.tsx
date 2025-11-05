@@ -149,15 +149,22 @@ export default function ShoppingScreen() {
         </View>
       )}
 
-      {/* Items non cochés */}
-      {uncheckedItems.length > 0 && (
+      {/* Items non cochés - Affiché si il y a des items OU si "Déjà acheté" est visible */}
+      {(uncheckedItems.length > 0 || checkedItems.length > 0) && (
         <View style={styles.section}>
           <View style={styles.sectionHeaderFirst}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               À acheter ({uncheckedItems.length})
             </Text>
           </View>
-          {uncheckedItems.map((item) => {
+          {uncheckedItems.length === 0 ? (
+            <View style={styles.emptySection}>
+              <Text style={[styles.emptySectionText, { color: colors.icon }]}>
+                Aucun article à acheter
+              </Text>
+            </View>
+          ) : (
+            uncheckedItems.map((item) => {
             const foodItemImage = item.food_item_id ? getFoodItemImage(item.food_item_id) : null;
             return (
               <SwipeableRow key={item.id} onDelete={() => handleDelete(item.id)}>
@@ -203,7 +210,8 @@ export default function ShoppingScreen() {
                 </Card>
               </SwipeableRow>
             );
-          })}
+            })
+          )}
         </View>
       )}
 
@@ -376,6 +384,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.xs,
     paddingHorizontal: Spacing.lg,
+  },
+  emptySection: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptySectionText: {
+    fontSize: 14,
+    fontWeight: '400',
   },
   itemCard: {
     marginBottom: 0,

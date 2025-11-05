@@ -10,21 +10,35 @@ import {
   Modal,
   Pressable,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import * as LucideIcons from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/components/ui/Button';
+import { IconSelectorSheet } from '@/components/IconSelectorSheet';
 
 interface CreateFolderSheetProps {
   visible: boolean;
   onClose: () => void;
-  onCreateFolder: (name: string) => Promise<boolean>;
+  onCreateFolder: (name: string, iconName: string) => Promise<boolean>;
 }
+
+
+// Fonction pour obtenir l'icône dynamiquement
+const getIconComponent = (iconName: string) => {
+  const pascalName = iconName
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+  
+  const IconComponent = (LucideIcons as any)[pascalName] || LucideIcons.Folder;
+  return IconComponent;
+};
 
 export function CreateFolderSheet({
   visible,
@@ -34,18 +48,20 @@ export function CreateFolderSheet({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [folderName, setFolderName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState<string>('cooking-pot');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showIconSelector, setShowIconSelector] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   // Auto-focus sur l'input quand la sheet s'ouvre
   useEffect(() => {
     if (visible) {
-      // Petit délai pour s'assurer que la Modal est montée
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
       setFolderName('');
+      setSelectedIcon('cooking-pot');
       setError(null);
     }
   }, [visible]);
@@ -59,7 +75,7 @@ export function CreateFolderSheet({
     setIsCreating(true);
     setError(null);
 
-    const success = await onCreateFolder(folderName.trim());
+    const success = await onCreateFolder(folderName.trim(), selectedIcon);
 
     setIsCreating(false);
 
@@ -72,6 +88,7 @@ export function CreateFolderSheet({
 
   const handleClose = () => {
     setFolderName('');
+    setSelectedIcon('cooking-pot');
     setError(null);
     onClose();
   };
@@ -88,13 +105,8 @@ export function CreateFolderSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Nouveau Dossier</Text>
-          <Pressable
-            onPress={handleClose}
-            style={styles.closeButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
+        <View style={styles.header}>
+          <Pressable onPress={handleClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
           </Pressable>
         </View>
@@ -105,9 +117,28 @@ export function CreateFolderSheet({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.description, { color: colors.icon }]}>
-            Organisez vos recettes en les classant dans des dossiers
-          </Text>
+          {/* Sélection d'icône - Centré en haut */}
+          <View style={styles.iconContainer}>
+            <TouchableOpacity
+              onPress={() => setShowIconSelector(true)}
+              activeOpacity={0.7}
+              disabled={isCreating}
+            >
+              <View style={[
+                styles.iconDisplay,
+                {
+                  backgroundColor: colorScheme === 'dark' 
+                    ? 'rgba(249, 64, 60, 0.15)' 
+                    : 'rgba(249, 64, 60, 0.1)',
+                }
+              ]}>
+                {(() => {
+                  const IconComponent = getIconComponent(selectedIcon);
+                  return <IconComponent size={56} color={colors.primary} />;
+                })()}
+              </View>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.inputContainer}>
             <Text style={[styles.label, { color: colors.text }]}>Nom du dossier</Text>
@@ -136,6 +167,9 @@ export function CreateFolderSheet({
               editable={!isCreating}
             />
             {error && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
+            <Text style={[styles.hint, { color: colors.icon }]}>
+              Organisez vos recettes enregistrées dans des dossiers
+            </Text>
           </View>
         </ScrollView>
 
@@ -159,6 +193,14 @@ export function CreateFolderSheet({
           />
         </View>
       </KeyboardAvoidingView>
+
+      {/* Icon Selector Sheet */}
+      <IconSelectorSheet
+        visible={showIconSelector}
+        onClose={() => setShowIconSelector(false)}
+        onSelectIcon={setSelectedIcon}
+        selectedIcon={selectedIcon}
+      />
     </Modal>
   );
 }
@@ -170,15 +212,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
   },
   closeButton: {
     padding: Spacing.xs,
@@ -188,12 +225,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
   },
-  description: {
-    fontSize: 16,
-    marginBottom: Spacing.xl,
-  },
   inputContainer: {
     marginTop: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   label: {
     fontSize: 16,
@@ -211,6 +245,30 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     marginTop: Spacing.xs,
+  },
+  hint: {
+    fontSize: 13,
+    marginTop: Spacing.sm,
+    lineHeight: 18,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  iconDisplay: {
+    width: 120,
+    height: 120,
+    borderRadius: BorderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   footer: {
     flexDirection: 'row',

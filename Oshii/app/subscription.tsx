@@ -2,26 +2,44 @@
  * Écran de sélection de plan d'abonnement
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { useRevenueCat } from '@/hooks/useRevenueCat';
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [selectedPlan, setSelectedPlan] = useState<'yearly' | 'monthly'>('yearly');
+  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
+  
+  const { 
+    isLoading, 
+    isPremium, 
+    offerings, 
+    isPurchasing, 
+    purchase, 
+    restorePurchases 
+  } = useRevenueCat();
+
+  // Si l'utilisateur est déjà premium, rediriger vers home
+  useEffect(() => {
+    if (isPremium && !isLoading) {
+      router.back();
+    }
+  }, [isPremium, isLoading, router]);
 
   const features = [
     'Recettes illimitées',
@@ -31,21 +49,118 @@ export default function SubscriptionScreen() {
     'Accès aux fonctionnalités bêta',
   ];
 
-  const handleStartTrial = () => {
-    // TODO: Implémenter la logique d'abonnement
-    console.log('Starting trial with plan:', selectedPlan);
+  // Calculer le pourcentage d'économie de l'abonnement annuel
+  const calculateSavingsPercentage = (): number => {
+    if (!offerings?.annual || !offerings?.monthly) return 0;
+    
+    // Extraire les prix numériques des strings (ex: "24,99 $US" -> 24.99)
+    const annualPrice = parseFloat(offerings.annual.priceString.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    const monthlyPrice = parseFloat(offerings.monthly.priceString.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    
+    // Prix mensuel si on prend l'annuel
+    const annualMonthlyPrice = annualPrice / 12;
+    
+    // Calcul du pourcentage d'économie
+    const savings = ((monthlyPrice - annualMonthlyPrice) / monthlyPrice) * 100;
+    
+    return Math.round(savings);
   };
+
+  const savingsPercentage = calculateSavingsPercentage();
+
+  // Calculer le prix mensuel de l'abonnement annuel
+  const getAnnualMonthlyPrice = (): string => {
+    if (!offerings?.annual) return '';
+    
+    // Extraire le prix numérique et la devise
+    const priceString = offerings.annual.priceString;
+    const annualPrice = parseFloat(priceString.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    const currency = priceString.replace(/[0-9.,\s]/g, '');
+    
+    // Prix par mois
+    const monthlyPrice = (annualPrice / 12).toFixed(2).replace('.', ',');
+    
+    return `${monthlyPrice} ${currency}/mois`;
+  };
+
+  const handleStartTrial = async () => {
+    console.log('🎯 [PAYWALL] Bouton Continuer pressé');
+    console.log('🎯 [PAYWALL] Plan sélectionné:', selectedPlan);
+
+    if (!offerings) {
+      console.error('❌ [PAYWALL] Aucune offre disponible');
+      return;
+    }
+
+    const selectedProduct = selectedPlan === 'annual' ? offerings.annual : offerings.monthly;
+    
+    if (!selectedProduct) {
+      console.error('❌ [PAYWALL] Produit sélectionné non disponible');
+      return;
+    }
+
+    console.log('🎯 [PAYWALL] Produit sélectionné:', {
+      id: selectedProduct.identifier,
+      price: selectedProduct.priceString,
+      period: selectedProduct.period,
+    });
+
+    console.log('🎯 [PAYWALL] Appel à purchase()...');
+    const success = await purchase(selectedProduct.identifier);
+    
+    if (success) {
+      console.log('✅ [PAYWALL] Achat réussi, fermeture du paywall');
+      router.back();
+    }
+    // Si l'achat échoue ou est annulé, on reste sur le paywall
+    // Les logs appropriés ont déjà été affichés par le service
+  };
+
+  const handleRestore = async () => {
+    await restorePurchases();
+  };
+
+  const handleOpenPrivacy = async () => {
+    const url = 'https://v0-oshii.vercel.app/privacy';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
+  };
+
+  const handleOpenTerms = async () => {
+    const url = 'https://v0-oshii.vercel.app/terms';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
+  };
+
+  // Afficher un loader pendant le chargement initial
+  if (isLoading && !offerings) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.content, styles.centerContent]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Chargement des offres...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         {/* Bouton de fermeture */}
         <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+          style={[styles.closeButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}
           onPress={() => router.back()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          disabled={isPurchasing}
         >
-          <X size={24} color="#FFFFFF" />
+          <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
         </TouchableOpacity>
 
         {/* Logo */}
@@ -55,7 +170,7 @@ export default function SubscriptionScreen() {
 
         {/* Titre */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Choisissez votre plan
+          Oshii Pro
         </Text>
 
         {/* Liste des fonctionnalités */}
@@ -75,120 +190,161 @@ export default function SubscriptionScreen() {
         {/* Options de plan */}
         <View style={styles.plansContainer}>
           {/* Plan Annuel */}
-          <TouchableOpacity
-            style={[
-              styles.planCard,
-              selectedPlan === 'yearly' && styles.planCardSelected,
-              {
-                backgroundColor: selectedPlan === 'yearly' ? colors.card : 'transparent',
-                borderColor: selectedPlan === 'yearly' ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setSelectedPlan('yearly')}
-            activeOpacity={0.8}
-          >
-            {/* Badge de réduction */}
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>20% OFF</Text>
-            </View>
-
-            <View style={styles.planContent}>
-              <View style={styles.planLeft}>
-                <View
-                  style={[
-                    styles.radioButton,
-                    selectedPlan === 'yearly' && styles.radioButtonSelected,
-                    {
-                      borderColor: selectedPlan === 'yearly' ? colors.primary : colors.border,
-                    },
-                  ]}
-                >
-                  {selectedPlan === 'yearly' && (
-                    <View style={[styles.radioButtonInner, { backgroundColor: colors.primary }]} />
-                  )}
+          {offerings?.annual && (
+            <TouchableOpacity
+              style={[
+                styles.planCard,
+                styles.planCardAnnual,
+                selectedPlan === 'annual' && styles.planCardSelected,
+                {
+                  backgroundColor: selectedPlan === 'annual' ? colors.card : 'transparent',
+                  borderColor: selectedPlan === 'annual' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedPlan('annual')}
+              activeOpacity={0.8}
+              disabled={isPurchasing}
+            >
+              {/* Badge économies */}
+              {savingsPercentage > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>Économise {savingsPercentage}%</Text>
                 </View>
-                <View style={styles.planInfo}>
-                  <Text style={[styles.planDuration, { color: colors.text }]}>
-                    12 Mois
-                  </Text>
+              )}
+
+              <View style={styles.planWrapper}>
+                {/* Ligne principale : Radio + Titre + Prix */}
+                <View style={styles.planContent}>
+                  <View style={styles.planLeft}>
+                    <View
+                      style={[
+                        styles.radioButton,
+                        selectedPlan === 'annual' && styles.radioButtonSelected,
+                        {
+                          borderColor: selectedPlan === 'annual' ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      {selectedPlan === 'annual' && (
+                        <View style={[styles.radioButtonInner, { backgroundColor: colors.primary }]} />
+                      )}
+                    </View>
+                    <View>
+                      <Text style={[styles.planTitle, { color: colors.text }]}>
+                        Annuel
+                      </Text>
+                      {/* Durée en bas, alignée avec le titre */}
+                      <View style={styles.durationRow}>
+                        <Text style={[styles.planDuration, { color: colors.icon }]}>
+                          12 mois
+                        </Text>
+                        <Text style={[styles.monthlyEquivalent, { color: colors.icon }]}>
+                          • {getAnnualMonthlyPrice()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                   <Text style={[styles.planPrice, { color: colors.text }]}>
-                    49,99 €
+                    {offerings.annual.priceString}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.planMonthlyPrice, { color: colors.icon }]}>
-                4,17 €/mois
-              </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
           {/* Plan Mensuel */}
-          <TouchableOpacity
-            style={[
-              styles.planCard,
-              selectedPlan === 'monthly' && styles.planCardSelected,
-              {
-                backgroundColor: selectedPlan === 'monthly' ? colors.card : 'transparent',
-                borderColor: selectedPlan === 'monthly' ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setSelectedPlan('monthly')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.planContent}>
-              <View style={styles.planLeft}>
-                <View
-                  style={[
-                    styles.radioButton,
-                    selectedPlan === 'monthly' && styles.radioButtonSelected,
-                    {
-                      borderColor: selectedPlan === 'monthly' ? colors.primary : colors.border,
-                    },
-                  ]}
-                >
-                  {selectedPlan === 'monthly' && (
-                    <View style={[styles.radioButtonInner, { backgroundColor: colors.primary }]} />
-                  )}
-                </View>
-                <View style={styles.planInfo}>
-                  <Text style={[styles.planDuration, { color: colors.text }]}>
-                    Mois
+          {offerings?.monthly && (
+            <TouchableOpacity
+              style={[
+                styles.planCard,
+                selectedPlan === 'monthly' && styles.planCardSelected,
+                {
+                  backgroundColor: selectedPlan === 'monthly' ? colors.card : 'transparent',
+                  borderColor: selectedPlan === 'monthly' ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedPlan('monthly')}
+              activeOpacity={0.8}
+              disabled={isPurchasing}
+            >
+              <View style={styles.planWrapper}>
+                {/* Ligne principale : Radio + Titre + Prix */}
+                <View style={styles.planContent}>
+                  <View style={styles.planLeft}>
+                    <View
+                      style={[
+                        styles.radioButton,
+                        selectedPlan === 'monthly' && styles.radioButtonSelected,
+                        {
+                          borderColor: selectedPlan === 'monthly' ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      {selectedPlan === 'monthly' && (
+                        <View style={[styles.radioButtonInner, { backgroundColor: colors.primary }]} />
+                      )}
+                    </View>
+                    <View>
+                      <Text style={[styles.planTitle, { color: colors.text }]}>
+                        Mensuel
+                      </Text>
+                      {/* Durée en bas, alignée avec le titre */}
+                      <Text style={[styles.planDuration, { color: colors.icon }]}>
+                        1 mois
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.planPrice, { color: colors.text }]}>
+                    {offerings.monthly.priceString}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.planMonthlyPrice, { color: colors.icon }]}>
-                5,99 €/mois
-              </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Note de renouvellement automatique */}
+        <Text style={[styles.renewalNote, { color: colors.icon }]}>
+          Renouvellement automatique
+        </Text>
 
         {/* Bouton CTA */}
         <TouchableOpacity
-          style={[styles.ctaButton, { backgroundColor: colors.primary }]}
+          style={[
+            styles.ctaButton, 
+            { 
+              backgroundColor: colors.primary,
+              opacity: isPurchasing ? 0.6 : 1,
+            }
+          ]}
           onPress={handleStartTrial}
           activeOpacity={0.8}
+          disabled={isPurchasing || !offerings}
         >
-          <Text style={styles.ctaButtonText}>
-            Continuer
-          </Text>
+          {isPurchasing ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.ctaButtonText}>
+              Continuer
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Liens du footer */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => console.log('Restore')}>
+          <TouchableOpacity onPress={handleRestore} disabled={isPurchasing}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
               Restaurer les achats
             </Text>
           </TouchableOpacity>
           <Text style={[styles.footerSeparator, { color: colors.icon }]}>•</Text>
-          <TouchableOpacity onPress={() => console.log('Terms')}>
+          <TouchableOpacity onPress={handleOpenTerms}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
               Conditions
             </Text>
           </TouchableOpacity>
           <Text style={[styles.footerSeparator, { color: colors.icon }]}>•</Text>
-          <TouchableOpacity onPress={() => console.log('Privacy')}>
+          <TouchableOpacity onPress={handleOpenPrivacy}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
               Confidentialité
             </Text>
@@ -209,6 +365,14 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.lg,
     justifyContent: 'space-between',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    marginTop: Spacing.md,
   },
   closeButton: {
     position: 'absolute',
@@ -263,6 +427,10 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     position: 'relative',
   },
+  planCardAnnual: {
+    paddingVertical: Spacing.md + 4,
+    paddingHorizontal: Spacing.md + 2,
+  },
   planCardSelected: {
     shadowColor: '#000',
     shadowOffset: {
@@ -287,6 +455,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  planWrapper: {
+    // Pas de gap nécessaire car tout est dans planContent maintenant
+  },
   planContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,7 +466,7 @@ const styles = StyleSheet.create({
   planLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: Spacing.md,
   },
   radioButton: {
     width: 24,
@@ -304,7 +475,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
   },
   radioButtonSelected: {
     borderWidth: 2,
@@ -314,21 +484,33 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: BorderRadius.full,
   },
-  planInfo: {
-    flex: 1,
-  },
-  planDuration: {
+  planTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: Spacing.xs / 2,
+    marginBottom: 2,
+  },
+  durationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  planDuration: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  monthlyEquivalent: {
+    fontSize: 11,
+    fontWeight: '400',
   },
   planPrice: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
   },
-  planMonthlyPrice: {
-    fontSize: 16,
-    fontWeight: '500',
+  renewalNote: {
+    fontSize: 12,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
   },
   ctaButton: {
     paddingVertical: Spacing.md + Spacing.xs,

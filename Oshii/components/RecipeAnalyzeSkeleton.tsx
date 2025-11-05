@@ -3,17 +3,19 @@
  * Affiche un skeleton moderne avec animations shimmer pendant l'analyse de la recette
  */
 
+import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Animated,
+  Easing,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { ChefHat, X } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export type AnalyzeStage =
   | 'Téléchargement'
@@ -48,7 +50,6 @@ export function RecipeAnalyzeSkeleton({
   
   // Animation shimmer
   const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Animation shimmer continue
@@ -69,27 +70,10 @@ export function RecipeAnalyzeSkeleton({
     shimmerLoop.start();
 
     // Animation pulse pour le chip actif
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseLoop.start();
-
     return () => {
       shimmerLoop.stop();
-      pulseLoop.stop();
     };
-  }, [shimmerAnim, pulseAnim]);
+  }, [shimmerAnim]);
 
   // Animation shimmer : interpolation pour un effet de vague
   const shimmerOpacity = shimmerAnim.interpolate({
@@ -98,13 +82,23 @@ export function RecipeAnalyzeSkeleton({
   });
 
   const activeStageIndex = STAGES.indexOf(stage);
+  const progressAnim = useRef(new Animated.Value(activeStageIndex + 1)).current;
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: activeStageIndex + 1,
+      duration: 1000,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+  }, [activeStageIndex, progressAnim]);
 
   const renderShimmer = (width: string | number = '100%') => {
     return (
       <Animated.View
         style={[
           styles.shimmerContainer,
-          { width, backgroundColor: colors.border },
+          { width: width as any, backgroundColor: colors.border },
           {
             opacity: shimmerOpacity,
           },
@@ -121,13 +115,8 @@ export function RecipeAnalyzeSkeleton({
     >
       {/* En-tête */}
       <View style={styles.header}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: colors.secondary },
-          ]}
-        >
-          <ChefHat size={32} color={colors.primary} strokeWidth={1.5} />
+        <View style={styles.iconContainer}>
+          <OshiiLogo size="lg" />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>
           On analyse la recette…
@@ -169,9 +158,7 @@ export function RecipeAnalyzeSkeleton({
                   styles.ingredientIcon,
                   { backgroundColor: colors.border },
                 ]}
-              >
-                <ChefHat size={12} color={colors.icon} strokeWidth={1.5} />
-              </View>
+              />
               {renderShimmer(Math.random() * 40 + 50 + '%')}
             </View>
           ))}
@@ -198,39 +185,32 @@ export function RecipeAnalyzeSkeleton({
       {/* Barre de progression - Chips */}
       <View style={styles.progressContainer}>
         {STAGES.map((stageName, index) => {
-          const isActive = index === activeStageIndex;
-          const isCompleted = index < activeStageIndex;
+          const fill = Animated.subtract(progressAnim, index).interpolate({
+            inputRange: [0, 1],
+            outputRange: ['0%', '100%'],
+            extrapolate: 'clamp',
+          });
 
           return (
-            <Animated.View
+            <View
               key={stageName}
               style={[
-                styles.chip,
-                isActive && {
-                  transform: [{ scale: pulseAnim }],
-                  opacity: pulseAnim,
-                },
-                isCompleted && [styles.chipCompleted, { borderColor: colors.primary }],
-                isActive && [
-                  styles.chipActive,
-                  { backgroundColor: colors.primary },
-                ],
-                !isActive &&
-                  !isCompleted && [
-                    styles.chipPending,
-                    { borderColor: colors.border },
-                  ],
+                styles.progressSegment,
+                { backgroundColor: colors.border },
+                index === 0 && styles.firstSegment,
+                index === STAGES.length - 1 && styles.lastSegment,
               ]}
             >
-              <Text
+              <Animated.View
                 style={[
-                  styles.chipText,
-                  { color: isActive || isCompleted ? '#FFFFFF' : colors.icon },
+                  styles.progressFill,
+                  {
+                    backgroundColor: colors.primary,
+                    width: fill,
+                  },
                 ]}
-              >
-                {stageName}
-              </Text>
-            </Animated.View>
+              />
+            </View>
           );
         })}
       </View>
@@ -245,15 +225,33 @@ export function RecipeAnalyzeSkeleton({
         <TouchableOpacity
           style={[
             styles.cancelButton,
-            { backgroundColor: colors.secondary, borderColor: colors.border },
+            {
+              backgroundColor:
+                colorScheme === 'dark'
+                  ? 'rgba(255, 255, 255, 0.06)'
+                  : colors.secondary,
+              borderColor:
+                colorScheme === 'dark'
+                  ? '#2E2E2E'
+                  : colors.border,
+            },
           ]}
           onPress={onCancel}
           accessible
           accessibilityRole="button"
           accessibilityLabel="Annuler l'analyse"
         >
-          <X size={18} color={colors.text} strokeWidth={2} />
-          <Text style={[styles.cancelButtonText, { color: colors.text }]}>
+          <X
+            size={18}
+            color={colorScheme === 'dark' ? '#ECEDEE' : colors.text}
+            strokeWidth={2}
+          />
+          <Text
+            style={[
+              styles.cancelButtonText,
+              { color: colorScheme === 'dark' ? '#ECEDEE' : colors.text },
+            ]}
+          >
             Annuler
           </Text>
         </TouchableOpacity>
@@ -348,31 +346,27 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    flexWrap: 'wrap',
     gap: Spacing.sm,
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
   },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+  progressSegment: {
+    flex: 1,
+    height: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1.5,
+    overflow: 'hidden',
   },
-  chipActive: {
-    borderColor: 'transparent',
+  firstSegment: {
+    marginLeft: 0,
   },
-  chipCompleted: {
-    borderColor: 'transparent',
-    backgroundColor: '#4CAF50',
+  lastSegment: {
+    marginRight: 0,
   },
-  chipPending: {
-    backgroundColor: 'transparent',
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
+  progressFill: {
+    height: '100%',
+    borderRadius: BorderRadius.full,
   },
   timeIndicator: {
     fontSize: 12,

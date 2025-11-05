@@ -40,5 +40,17 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
+# Xcode
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+ios/*.xcworkspace/xcuserdata/
+
+# CocoaPods
+ios/Pods/
+
+# Certificates / signing
+ios/*.p12
+ios/*.mobileprovision
+
 /android

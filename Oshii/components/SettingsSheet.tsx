@@ -2,7 +2,7 @@
  * Page Sheet des paramètres de l'application
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,52 +10,99 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
+  Linking,
+  Alert,
 } from 'react-native';
-import { X, Bell, Shield, HelpCircle, Info, LogOut, Trash2 } from 'lucide-react-native';
+import Purchases from 'react-native-purchases';
+import { X, HelpCircle, Info, LogOut, Trash2, Mail, Moon, Star, ChevronRight } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
+import { TutorialSheet } from '@/components/TutorialSheet';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 
 interface SettingsSheetProps {
   visible: boolean;
   onClose: () => void;
   onLogout: () => void;
-  onDeleteAccount: () => void;
+  user: any;
 }
 
-export function SettingsSheet({ visible, onClose, onLogout, onDeleteAccount }: SettingsSheetProps) {
+export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { deleteAccount, isPremium } = useAuthContext();
+  const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      // Fermer le modal de confirmation
+      setShowDeleteConfirm(false);
+      // Attendre un peu pour que l'utilisateur voie la fermeture du modal
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // Fermer le SettingsSheet
+      onClose();
+      // Rediriger vers la page d'accueil
+      router.replace('/welcome');
+    } catch (err: any) {
+      console.error('❌ [SettingsSheet] Erreur lors de la suppression du compte:', err);
+      Alert.alert(
+        'Erreur',
+        err.message || 'Une erreur est survenue lors de la suppression du compte. Veuillez réessayer.'
+      );
+      setIsDeleting(false);
+    }
+  };
+
+  // Vérifier si c'est un email Apple Private Relay
+  const isApplePrivateRelay = user?.email?.includes('privaterelay.appleid.com');
+  const displayEmail = isApplePrivateRelay ? 'Compte Apple' : (user?.email || 'Non renseigné');
+
+  // Détecter le thème actuel
+  const themeLabel = colorScheme === 'dark' ? 'Sombre' : 'Clair';
+
+  // Fonctions pour ouvrir les liens web
+  const handleOpenTerms = async () => {
+    const url = 'https://v0-oshii.vercel.app/terms';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
+  };
+
+  const handleOpenPrivacy = async () => {
+    const url = 'https://v0-oshii.vercel.app/privacy';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
+  };
 
   const settingsOptions = [
     {
-      id: 'notifications',
-      title: 'Notifications',
-      icon: Bell,
-      description: 'Gérer les notifications',
+      id: 'theme',
+      title: 'Thème',
+      icon: Moon,
+      description: themeLabel,
       onPress: () => {
-        // TODO: Implémenter la page de notifications
-        console.log('Notifications');
-      },
-    },
-    {
-      id: 'privacy',
-      title: 'Confidentialité',
-      icon: Shield,
-      description: 'Paramètres de confidentialité',
-      onPress: () => {
-        // TODO: Implémenter la page de confidentialité
-        console.log('Confidentialité');
+        // TODO: Implémenter le changement de thème
+        console.log('Thème');
       },
     },
     {
       id: 'help',
       title: 'Aide',
       icon: HelpCircle,
-      description: 'Centre d\'aide et support',
+      description: 'Comment transformer vos vidéos',
       onPress: () => {
-        // TODO: Implémenter la page d'aide
-        console.log('Aide');
+        setShowTutorial(true);
       },
     },
     {
@@ -94,6 +141,58 @@ export function SettingsSheet({ visible, onClose, onLogout, onDeleteAccount }: S
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Container Abonnement Premium - Visible uniquement si premium */}
+          {isPremium && (
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await Purchases.showManageSubscriptions();
+                } catch (error) {
+                  console.error('❌ [SettingsSheet] Erreur ouverture gestion abonnement:', error);
+                  Alert.alert(
+                    'Erreur',
+                    'Impossible d&apos;ouvrir la gestion d&apos;abonnement. Veuillez réessayer.'
+                  );
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Card style={styles.optionCard}>
+                <View style={styles.optionContent}>
+                  <View style={[styles.iconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                    <Star size={20} color={colors.primary} fill={colors.primary} />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, { color: colors.text }]}>
+                      Abonnement Premium
+                    </Text>
+                    <Text style={[styles.optionDescription, { color: colors.icon }]}>
+                      Gérer mon abonnement
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.icon} />
+                </View>
+              </Card>
+            </TouchableOpacity>
+          )}
+
+          {/* Container Email */}
+          <Card style={styles.optionCard}>
+            <View style={styles.optionContent}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.card }]}>
+                <Mail size={20} color={colors.primary} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>
+                  Email
+                </Text>
+                <Text style={[styles.optionDescription, { color: colors.icon }]}>
+                  {displayEmail}
+                </Text>
+              </View>
+            </View>
+          </Card>
+
           {settingsOptions.map((option) => {
             const IconComponent = option.icon;
             return (
@@ -134,7 +233,10 @@ export function SettingsSheet({ visible, onClose, onLogout, onDeleteAccount }: S
 
             <TouchableOpacity
               style={[styles.deleteButton, { borderColor: colors.border }]}
-              onPress={onDeleteAccount}
+              onPress={() => {
+                console.log('🔴 [SettingsSheet] Bouton "Supprimer mon compte" pressé');
+                setShowDeleteConfirm(true);
+              }}
               activeOpacity={0.7}
             >
               <Trash2 size={20} color={colors.icon} />
@@ -150,9 +252,40 @@ export function SettingsSheet({ visible, onClose, onLogout, onDeleteAccount }: S
             <Text style={[styles.tagline, { color: colors.icon }]}>
               Vos recettes, simplifiées
             </Text>
+            
+            {/* Liens légaux */}
+            <View style={styles.legalLinks}>
+              <TouchableOpacity onPress={handleOpenTerms}>
+                <Text style={[styles.legalLink, { color: colors.icon }]}>
+                  Conditions d&apos;utilisation
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.legalSeparator, { color: colors.icon }]}>•</Text>
+              <TouchableOpacity onPress={handleOpenPrivacy}>
+                <Text style={[styles.legalLink, { color: colors.icon }]}>
+                  Confidentialité
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </View>
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmDeleteSheet
+        visible={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteAccount}
+        isDeleting={isDeleting}
+        title="Supprimer mon compte"
+        message="Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action supprimera irréversiblement toutes vos données : vos recettes, vos dossiers, vos listes de courses, et toutes les informations associées à votre compte. Cette action est irréversible et ne peut pas être annulée."
+      />
+
+      {/* Modal du tutoriel */}
+      <TutorialSheet
+        visible={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
     </Modal>
   );
 }
@@ -251,6 +384,21 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 12,
+    marginBottom: Spacing.md,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.sm,
+  },
+  legalLink: {
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
+    fontSize: 12,
+    marginHorizontal: Spacing.sm,
   },
 });
 

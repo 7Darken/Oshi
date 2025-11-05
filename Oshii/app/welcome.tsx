@@ -25,8 +25,9 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signInWithGoogle, isLoading } = useAuthContext();
+  const { signInWithGoogle, signInWithApple, isLoading } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const handleEmailLogin = () => {
     router.push('/login');
@@ -74,9 +75,42 @@ export default function WelcomeScreen() {
     // Ne pas mettre setIsGoogleLoading(false) ici car la navigation peut prendre du temps
   };
 
-  const handleAppleLogin = () => {
-    console.log('Apple login');
-    // TODO: Implémenter Apple OAuth
+  const handleAppleLogin = async () => {
+    setIsAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      
+      // Si l'utilisateur a annulé, ne rien faire
+      if (!result.error && !result.user) {
+        setIsAppleLoading(false);
+        return;
+      }
+
+      if (result.error) {
+        setIsAppleLoading(false);
+        Alert.alert(
+          'Erreur',
+          result.error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+        );
+        return;
+      }
+
+      // L'authentification a réussi
+      console.log('✅ [Welcome] Authentification Apple réussie');
+      
+      // Attendre un peu pour que la session soit bien établie dans Supabase
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('🔄 [Welcome] Navigation vers /auth-callback');
+      router.push('/auth-callback');
+    } catch (error: any) {
+      setIsAppleLoading(false);
+      Alert.alert(
+        'Erreur',
+        error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+      );
+    }
+    // Ne pas mettre setIsAppleLoading(false) ici car la navigation peut prendre du temps
   };
 
   return (
@@ -113,23 +147,23 @@ export default function WelcomeScreen() {
           style={[
             styles.loginButton,
             { backgroundColor: colors.card, borderColor: colors.border },
-            (isGoogleLoading || isLoading) && styles.loginButtonDisabled
+            isGoogleLoading && styles.loginButtonDisabled
           ]}
           onPress={handleGoogleLogin}
           activeOpacity={0.8}
-          disabled={isGoogleLoading || isLoading}
+          disabled={isGoogleLoading}
         >
-          {isGoogleLoading || isLoading ? (
+          {isGoogleLoading ? (
             <ActivityIndicator size="small" color={colors.text} />
           ) : (
             <ExpoImage
               source={require('@/assets/logo/GoogleLogo.png')}
-              style={styles.socialIcon}
+              style={styles.googleIcon}
               contentFit="contain"
             />
           )}
           <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            {isGoogleLoading || isLoading ? 'Connexion...' : (
+            {isGoogleLoading ? 'Connexion...' : (
               <>Continuer avec <Text style={styles.loginButtonBold}>Google</Text></>
             )}
           </Text>
@@ -137,17 +171,34 @@ export default function WelcomeScreen() {
 
         {/* Apple */}
         <TouchableOpacity
-          style={[styles.loginButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[
+            styles.loginButton,
+            {
+              backgroundColor: colorScheme === 'light' ? '#000000' : colors.card,
+              borderColor: colorScheme === 'light' ? '#000000' : colors.border,
+            },
+            isAppleLoading && styles.loginButtonDisabled
+          ]}
           onPress={handleAppleLogin}
           activeOpacity={0.8}
+          disabled={isAppleLoading}
         >
-          <ExpoImage
-            source={require('@/assets/logo/AppleLogo.png')}
-            style={styles.socialIcon}
-            contentFit="contain"
-          />
-          <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            Continuer avec <Text style={styles.loginButtonBold}>Apple</Text>
+          {isAppleLoading ? (
+            <ActivityIndicator size="small" color={colorScheme === 'light' ? '#FFFFFF' : colors.text} />
+          ) : (
+            <ExpoImage
+              source={require('@/assets/logo/AppleLogo.png')}
+              style={styles.appleIcon}
+              contentFit="contain"
+            />
+          )}
+          <Text style={[
+            styles.loginButtonText,
+            { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
+          ]}>
+            {isAppleLoading ? 'Connexion...' : (
+              <>Continuer avec <Text style={styles.loginButtonBold}>Apple</Text></>
+            )}
           </Text>
         </TouchableOpacity>
       </View>
@@ -201,9 +252,13 @@ const styles = StyleSheet.create({
   loginButtonBold: {
     fontWeight: '700',
   },
-  socialIcon: {
-    width: 20,
-    height: 20,
+  googleIcon: {
+    width: 28,
+    height: 28,
+  },
+  appleIcon: {
+    width: 22,
+    height: 22,
   },
   loginButtonDisabled: {
     opacity: 0.6,

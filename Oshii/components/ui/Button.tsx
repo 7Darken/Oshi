@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,

@@ -31,14 +31,16 @@ export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signIn, signInWithGoogle, isLoading } = useAuthContext();
+  const { signIn, signInWithGoogle, signInWithApple, isLoading } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleLogin = async () => {
+    // Réinitialiser l'erreur
     setError(null);
 
     // Validation
@@ -61,8 +63,25 @@ export default function LoginScreen() {
       await signIn({ email, password });
       router.replace('/(tabs)');
     } catch (err: any) {
-      console.error('❌ Erreur de connexion:', err);
-      setError(err.message || 'Erreur de connexion. Vérifiez vos identifiants.');
+      // Gérer les différents types d'erreurs
+      const errorMessage = err.message?.toLowerCase() || '';
+      
+      if (errorMessage.includes('invalid login credentials') || 
+          errorMessage.includes('invalid email or password') ||
+          errorMessage.includes('incorrect') ||
+          errorMessage.includes('wrong')) {
+        setError('Email ou mot de passe incorrect');
+      } else if (errorMessage.includes('email not confirmed')) {
+        setError('Veuillez confirmer votre email avant de vous connecter');
+      } else if (errorMessage.includes('too many requests')) {
+        setError('Trop de tentatives. Veuillez réessayer plus tard');
+      } else if (errorMessage.includes('network')) {
+        setError('Erreur de connexion. Vérifiez votre connexion internet');
+      } else {
+        // Logger uniquement les erreurs inattendues
+        console.error('❌ Erreur de connexion:', err);
+        setError('Erreur de connexion. Veuillez réessayer');
+      }
     }
   };
 
@@ -101,9 +120,35 @@ export default function LoginScreen() {
     }
   };
 
-  const handleAppleLogin = () => {
-    console.log('Apple login');
-    // TODO: Implémenter Apple OAuth
+  const handleAppleLogin = async () => {
+    setIsAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      
+      if (result.error) {
+        setIsAppleLoading(false);
+        Alert.alert(
+          'Erreur',
+          result.error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+        );
+        return;
+      }
+
+      // L'authentification a réussi
+      // Le redirect OAuth va automatiquement ouvrir auth-callback qui gérera la redirection finale
+      console.log('✅ [Login] Authentification Apple réussie, redirection automatique...');
+      
+      // Si pas de redirect automatique, rediriger vers auth-callback
+      if (result.user && result.session) {
+        router.replace('/auth-callback');
+      }
+    } catch (error: any) {
+      setIsAppleLoading(false);
+      Alert.alert(
+        'Erreur',
+        error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+      );
+    }
   };
 
   return (
@@ -129,7 +174,10 @@ export default function LoginScreen() {
             label="Email"
             placeholder="Votre adresse email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (error) setError(null);
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -140,7 +188,10 @@ export default function LoginScreen() {
             label="Mot de passe"
             placeholder="••••••••"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (error) setError(null);
+            }}
             secureTextEntry
             autoCapitalize="none"
             error={error?.includes('mot de passe') ? error : undefined}
@@ -181,40 +232,57 @@ export default function LoginScreen() {
             style={[
               styles.socialButton,
               { backgroundColor: colors.card, borderColor: colors.border },
-              (isGoogleLoading || isLoading) && styles.socialButtonDisabled
+              isGoogleLoading && styles.socialButtonDisabled
             ]}
             onPress={handleGoogleLogin}
             activeOpacity={0.8}
-            disabled={isGoogleLoading || isLoading}
+            disabled={isGoogleLoading}
           >
-            {isGoogleLoading || isLoading ? (
+            {isGoogleLoading ? (
               <ActivityIndicator size="small" color={colors.text} />
             ) : (
               <ExpoImage
                 source={require('@/assets/logo/GoogleLogo.png')}
-                style={styles.socialIcon}
+                style={styles.googleIcon}
                 contentFit="contain"
               />
             )}
             <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              {isGoogleLoading || isLoading ? 'Connexion...' : (
+              {isGoogleLoading ? 'Connexion...' : (
                 <>Continuer avec <Text style={styles.socialButtonBold}>Google</Text></>
               )}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.socialButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: colorScheme === 'light' ? '#000000' : colors.card,
+                borderColor: colorScheme === 'light' ? '#000000' : colors.border,
+              },
+              isAppleLoading && styles.socialButtonDisabled
+            ]}
             onPress={handleAppleLogin}
             activeOpacity={0.8}
+            disabled={isAppleLoading}
           >
-            <ExpoImage
-              source={require('@/assets/logo/AppleLogo.png')}
-              style={styles.socialIcon}
-              contentFit="contain"
-            />
-            <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              Continuer avec <Text style={styles.socialButtonBold}>Apple</Text>
+            {isAppleLoading ? (
+              <ActivityIndicator size="small" color={colorScheme === 'light' ? '#FFFFFF' : colors.text} />
+            ) : (
+              <ExpoImage
+                source={require('@/assets/logo/AppleLogo.png')}
+                style={styles.appleIcon}
+                contentFit="contain"
+              />
+            )}
+            <Text style={[
+              styles.socialButtonText,
+              { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
+            ]}>
+              {isAppleLoading ? 'Connexion...' : (
+                <>Continuer avec <Text style={styles.socialButtonBold}>Apple</Text></>
+              )}
             </Text>
           </TouchableOpacity>
         </View>
@@ -296,9 +364,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: Spacing.md,
   },
-  socialIcon: {
-    width: 20,
-    height: 20,
+  googleIcon: {
+    width: 28,
+    height: 28,
+  },
+  appleIcon: {
+    width: 22,
+    height: 22,
   },
   socialButtonText: {
     fontSize: 16,

@@ -13,12 +13,42 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { X, Folder, Check } from 'lucide-react-native';
+import { X, Check, Folder } from 'lucide-react-native';
+import * as LucideIcons from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useFolders } from '@/hooks/useFolders';
+
+// Palette de couleurs pour les icônes de dossiers
+const FOLDER_COLORS = [
+  '#FF8B7A',
+  '#E8D5B7',
+  '#B8E0D2',
+  '#D4C5E8',
+  '#FFD4A3',
+  '#B3D9E8',
+];
+
+// Fonction pour obtenir une couleur basée sur le nom
+const getFolderColor = (name: string): string => {
+  const index = name
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0) % FOLDER_COLORS.length;
+  return FOLDER_COLORS[index];
+};
+
+// Fonction pour obtenir l'icône dynamiquement
+const getIconComponent = (iconName: string = 'cooking-pot') => {
+  const pascalName = iconName
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+  
+  const IconComponent = (LucideIcons as any)[pascalName] || LucideIcons.Folder;
+  return IconComponent;
+};
 
 interface FolderSelectorSheetProps {
   visible: boolean;
@@ -145,9 +175,14 @@ export function FolderSelectorSheet({
                     ]}
                   >
                     <View style={styles.folderCardContent}>
-                      <View style={[styles.folderIcon, { backgroundColor: colors.secondary }]}>
-                        <Folder size={24} color={colors.primary} />
-                      </View>
+                      {(() => {
+                        const IconComponent = getIconComponent(folder.icon_name);
+                        return (
+                          <View style={styles.folderIcon}>
+                            <IconComponent size={24} color={getFolderColor(folder.name)} strokeWidth={2} />
+                          </View>
+                        );
+                      })()}
                       <View style={styles.folderInfo}>
                         <Text style={[styles.folderName, { color: colors.text }]}>
                           {folder.name}
@@ -231,7 +266,6 @@ const styles = StyleSheet.create({
   folderIcon: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,

@@ -13,11 +13,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Plus, Crown } from 'lucide-react-native';
+import { Plus, Crown, Sparkles, Star } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { FolderCard } from '@/components/ui/FolderCard';
 import { CreateFolderSheet } from '@/components/CreateFolderSheet';
@@ -31,55 +33,88 @@ const FoldersContainer = React.memo(({
   folders, 
   orphanCount, 
   colors, 
+  colorScheme,
   router, 
   handleFolderPress,
-  setShowFolderSheet 
+  setShowFolderSheet,
+  isPremium,
+  freeGenerationsRemaining,
+  cardWidth
 }: {
-  folders: { id: string; name: string; recipes_count?: number }[];
+  folders: { id: string; name: string; icon_name?: string; recipes_count?: number }[];
   orphanCount: number;
   colors: any;
+  colorScheme: 'light' | 'dark';
   router: any;
   handleFolderPress: (folderId: string, folderName: string) => void;
   setShowFolderSheet: (show: boolean) => void;
+  isPremium: boolean;
+  freeGenerationsRemaining: number;
+  cardWidth: number;
 }) => {
   if (folders.length === 0 && orphanCount === 0) return null;
 
   return (
     <View style={styles.foldersContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Mes recettes</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Mes recettes</Text>
+        {!isPremium && (
+          <View style={[
+            styles.generationsCounter, 
+            { 
+              backgroundColor: colorScheme === 'dark' 
+                ? 'rgba(249, 64, 60, 0.15)' 
+                : 'rgba(249, 64, 60, 0.1)',
+            }
+          ]}>
+            <Sparkles size={16} color={colors.primary} />
+            <Text style={[styles.generationsCounterText, { color: colors.primary }]}>
+              {freeGenerationsRemaining}
+            </Text>
+          </View>
+        )}
+      </View>
       <View style={styles.foldersGrid}>
         {/* Dossier fictif "Non enregistrés" */}
         {orphanCount > 0 && (
-          <FolderCard
-            name="Non enregistrés"
-            recipeCount={orphanCount}
-            onPress={() => {
-              router.push('/folder?folderId=null' as any);
-            }}
-          />
+          <View style={{ width: cardWidth }}>
+            <FolderCard
+              name="Non enregistrés"
+              recipeCount={orphanCount}
+              iconName="folder"
+              onPress={() => {
+                router.push('/folder?folderId=null' as any);
+              }}
+            />
+          </View>
         )}
         {/* Dossiers réels */}
         {folders.map((folder) => (
-          <FolderCard
-            key={folder.id}
-            name={folder.name}
-            recipeCount={folder.recipes_count || 0}
-            onPress={() => handleFolderPress(folder.id, folder.name)}
-          />
+          <View key={folder.id} style={{ width: cardWidth }}>
+            <FolderCard
+              name={folder.name}
+              recipeCount={folder.recipes_count || 0}
+              iconName={folder.icon_name}
+              onPress={() => handleFolderPress(folder.id, folder.name)}
+            />
+          </View>
         ))}
         {/* Carte "+ Nouveau dossier" */}
         <TouchableOpacity
-          style={[styles.newFolderCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[styles.newFolderCard, { backgroundColor: colors.card, borderColor: colors.border, width: cardWidth }]}
           onPress={() => setShowFolderSheet(true)}
           activeOpacity={0.7}
         >
           <View style={styles.newFolderIconContainer}>
-            <View style={[styles.newFolderIconCircle, { borderColor: colors.border }]}>
-              <Plus size={32} color={colors.primary} strokeWidth={2} />
+            <View style={[styles.newFolderIconBackground, { backgroundColor: colorScheme === 'dark' ? 'rgba(249, 64, 60, 0.15)' : 'rgba(249, 64, 60, 0.1)' }]}>
+              <Plus size={28} color={colors.primary} strokeWidth={1.5} />
             </View>
           </View>
           <Text style={[styles.newFolderLabel, { color: colors.text }]}>
             Nouveau dossier
+          </Text>
+          <Text style={[styles.newFolderSubLabel, { color: colors.icon }]}>
+            {' '}
           </Text>
         </TouchableOpacity>
       </View>
@@ -95,9 +130,19 @@ export default function HomeScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { width: windowWidth } = useWindowDimensions();
   const { recipes, isLoading: recipesLoading, error: recipesError, refresh: refreshRecipes } = useRecipes();
   const { folders, createFolder, refresh: refreshFolders } = useFolders();
+  const { isPremium, profile, refreshFreeGenerations, user } = useAuthContext();
   const hasOpenedPaywall = useRef(false);
+  
+  // Calculer la largeur des cartes pour 2 par ligne
+  const cardWidth = useMemo(() => {
+    const horizontalPadding = Spacing.lg * 2; // Padding gauche + droite
+    const gap = Spacing.md; // Gap entre les cartes
+    const availableWidth = windowWidth - horizontalPadding;
+    return (availableWidth - gap) / 2;
+  }, [windowWidth]);
   
   // Loading combiné pour le chargement initial
   const isLoading = recipesLoading;
@@ -114,6 +159,21 @@ export default function HomeScreen() {
     }
   }, [params.fromOnboarding, router]);
 
+  // Rafraîchir free_generations_remaining au chargement initial (pour les non-premium)
+  useEffect(() => {
+    if (!isPremium && user?.id) {
+      // Petit délai pour laisser le temps au contexte de se charger
+      const timer = setTimeout(() => {
+        refreshFreeGenerations(true).catch(err => {
+          if (__DEV__) {
+            console.error('❌ [Home] Erreur lors du refresh initial de free_generations_remaining:', err);
+          }
+        });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isPremium, user?.id, refreshFreeGenerations]);
+
   // Calculer les recettes non associées à un dossier (mémorisé pour éviter les re-renders)
   const orphanCount = useMemo(() => {
     return recipes.filter((recipe) => !recipe.folder_id).length;
@@ -124,12 +184,12 @@ export default function HomeScreen() {
     router.push(`/folder?folderId=${folderId}` as any);
   }, [router]);
 
-  const handleCreateFolder = async (name: string): Promise<boolean> => {
-    const newFolder = await createFolder(name);
+  const handleCreateFolder = async (name: string, iconName: string): Promise<boolean> => {
+    const newFolder = await createFolder(name, iconName);
     return !!newFolder;
   };
 
-  // Rafraîchir les dossiers et recettes quand l'écran redevient actif (optimisé)
+  // Rafraîchir les dossiers, recettes et free_generations_remaining quand l'écran redevient actif (optimisé)
   useFocusEffect(
     useCallback(() => {
       // Rafraîchir silencieusement sans mettre en loading (pour éviter la disparition du header)
@@ -139,7 +199,17 @@ export default function HomeScreen() {
       refreshRecipes().catch(err => {
         console.error('❌ [Home] Erreur lors du refresh des recettes:', err);
       });
-    }, [refreshFolders, refreshRecipes])
+      
+      // Rafraîchir free_generations_remaining uniquement pour les non-premium (silencieux)
+      if (!isPremium) {
+        refreshFreeGenerations(true).catch(err => {
+          // Erreur silencieuse, ne pas logger en prod pour éviter le spam
+          if (__DEV__) {
+            console.error('❌ [Home] Erreur lors du refresh de free_generations_remaining:', err);
+          }
+        });
+      }
+    }, [refreshFolders, refreshRecipes, isPremium, refreshFreeGenerations])
   );
 
   return (
@@ -159,14 +229,21 @@ export default function HomeScreen() {
               <OshiiLogo size="md" />
               <Text style={[styles.title, { color: colors.text }]}>Oshii</Text>
             </View>
-            <TouchableOpacity
-              style={[styles.premiumButton, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/subscription' as any)}
-              activeOpacity={0.8}
-            >
-              <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.premiumButtonText}>Premium</Text>
-            </TouchableOpacity>
+            {isPremium ? (
+              <View style={[styles.proTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                <Star size={14} color={colors.primary} fill={colors.primary} />
+                <Text style={[styles.proTagText, { color: colors.primary }]}>Oshii Pro</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.premiumButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/subscription' as any)}
+                activeOpacity={0.8}
+              >
+                <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.premiumButtonText}>Premium</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -175,9 +252,13 @@ export default function HomeScreen() {
           folders={folders}
           orphanCount={orphanCount}
           colors={colors}
+          colorScheme={colorScheme ?? 'light'}
           router={router}
           handleFolderPress={handleFolderPress}
           setShowFolderSheet={setShowFolderSheet}
+          isPremium={isPremium}
+          freeGenerationsRemaining={profile?.free_generations_remaining ?? 0}
+          cardWidth={cardWidth}
         />
 
         {/* Empty state si aucune recette */}
@@ -189,24 +270,33 @@ export default function HomeScreen() {
                 <OshiiLogo size="md" />
                 <Text style={[styles.emptyStateHeaderText, { color: colors.text }]}>Oshii</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.premiumButton, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/subscription' as any)}
-                activeOpacity={0.8}
-              >
-                <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={styles.premiumButtonText}>Premium</Text>
-              </TouchableOpacity>
+              {isPremium ? (
+                <View style={[styles.proTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                  <Star size={14} color={colors.primary} fill={colors.primary} />
+                  <Text style={[styles.proTagText, { color: colors.primary }]}>Oshii Pro</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.premiumButton, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push('/subscription' as any)}
+                  activeOpacity={0.8}
+                >
+                  <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={styles.premiumButtonText}>Premium</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             <View style={styles.emptyStateContent}>
-              {/* Logo TikTok avec opacité réduite */}
-              <View style={styles.tiktokLogoContainer}>
-                <ExpoImage
-                  source={require('@/assets/logo/Tiktoklogo.jpg')}
-                  style={styles.tiktokLogoImage}
-                  contentFit="cover"
-                />
+              {/* Card avec logo TikTok centré */}
+              <View style={[styles.tiktokLogoContainer, { backgroundColor: '#000000', borderColor: colors.border }]}>
+                <View style={styles.tiktokLogoWrapper}>
+                  <ExpoImage
+                    source={require('@/assets/logo/Tiktoklogo.jpg')}
+                    style={styles.tiktokLogoImage}
+                    contentFit="contain"
+                  />
+                </View>
               </View>
               
               {/* Titre */}
@@ -319,6 +409,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  proTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+    borderWidth: 1,
+  },
+  proTagText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
   recipesContainer: {
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -410,12 +513,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   tiktokLogoContainer: {
-    width: 140,
-    height: 140,
+    width: 100,
+    height: 160,
     borderRadius: BorderRadius.md,
-    overflow: 'hidden',
+    borderWidth: 1,
     marginBottom: Spacing.xl,
-    opacity: 0.7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  tiktokLogoWrapper: {
+    width: '60%',
+    height: '60%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tiktokLogoImage: {
     width: '100%',
@@ -457,36 +568,65 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.md,
     marginTop: Spacing.md,
+    justifyContent: 'space-between',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: Spacing.md,
+  },
+  generationsCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: 6,
+  },
+  generationsCounterText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   newFolderCard: {
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    minHeight: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '47%',
     borderStyle: 'dashed',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newFolderIconContainer: {
+    alignItems: 'center',
     marginBottom: Spacing.md,
   },
-  newFolderIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: BorderRadius.full,
-    borderWidth: 2,
+  newFolderIconBackground: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   newFolderLabel: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  newFolderSubLabel: {
+    fontSize: 14,
     textAlign: 'center',
   },
 });

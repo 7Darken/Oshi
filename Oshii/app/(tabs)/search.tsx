@@ -342,6 +342,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     padding: 0,
     overflow: 'hidden',
+    height: 200, // Hauteur fixe : image (120px) + contenu texte (80px)
   },
   recipeImage: {
     width: '100%',
@@ -358,6 +359,9 @@ const styles = StyleSheet.create({
   },
   recipeInfo: {
     padding: Spacing.md,
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 80,
   },
   recipeTitle: {
     fontSize: 15,

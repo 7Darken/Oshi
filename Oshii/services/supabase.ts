@@ -17,25 +17,59 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Créer le client Supabase avec stockage sécurisé
+// IMPORTANT: persistSession: true permet de restaurer automatiquement la session au démarrage
+// Le custom storage utilise SecureStore pour stocker les tokens de manière sécurisée
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: {
-      getItem: (key: string) => {
-        console.log('🔐 [Auth] Récupération depuis le stockage sécurisé:', key);
-        return SecureStore.getItemAsync(key);
+      getItem: async (key: string) => {
+        try {
+          // Récupérer depuis le stockage sécurisé
+          const value = await SecureStore.getItemAsync(key);
+          
+          // Log seulement en mode dev pour éviter le spam
+          if (__DEV__ && key.includes('auth-token')) {
+            console.log('🔐 [Auth] Récupération depuis SecureStore:', key.substring(0, 20) + '...');
+          }
+          
+          return value;
+        } catch (error) {
+          console.error('❌ [Auth] Erreur lors de la récupération depuis SecureStore:', error);
+          return null;
+        }
       },
-      setItem: (key: string, value: string) => {
-        console.log('🔐 [Auth] Sauvegarde dans le stockage sécurisé:', key);
-        return SecureStore.setItemAsync(key, value);
+      setItem: async (key: string, value: string) => {
+        try {
+          // Sauvegarder dans le stockage sécurisé
+          await SecureStore.setItemAsync(key, value);
+          
+          // Log seulement en mode dev pour éviter le spam
+          if (__DEV__ && key.includes('auth-token')) {
+            console.log('💾 [Auth] Sauvegarde dans SecureStore:', key.substring(0, 20) + '...');
+          }
+        } catch (error) {
+          console.error('❌ [Auth] Erreur lors de la sauvegarde dans SecureStore:', error);
+          throw error;
+        }
       },
-      removeItem: (key: string) => {
-        console.log('🔐 [Auth] Suppression du stockage sécurisé:', key);
-        return SecureStore.deleteItemAsync(key);
+      removeItem: async (key: string) => {
+        try {
+          // Supprimer du stockage sécurisé
+          await SecureStore.deleteItemAsync(key);
+          
+          // Log seulement en mode dev pour éviter le spam
+          if (__DEV__ && key.includes('auth-token')) {
+            console.log('🗑️ [Auth] Suppression de SecureStore:', key.substring(0, 20) + '...');
+          }
+        } catch (error) {
+          console.error('❌ [Auth] Erreur lors de la suppression de SecureStore:', error);
+          // Ne pas throw pour éviter de bloquer la déconnexion
+        }
       },
     },
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
+    autoRefreshToken: true, // Rafraîchir automatiquement le token avant expiration
+    persistSession: true, // Sauvegarder la session dans SecureStore pour restauration au démarrage
+    detectSessionInUrl: false, // Ne pas détecter les sessions dans les URLs (pour mobile)
   },
 });
 
@@ -71,7 +105,16 @@ export async function signUp(credentials: SignUpCredentials): Promise<AuthRespon
     });
 
     if (error) {
-      console.error('❌ [Auth] Erreur lors de l\'inscription:', error.message);
+      // Erreurs attendues (email déjà utilisé, etc.) - log simple
+      if (error.message?.includes('User already registered') || 
+          error.message?.includes('already exists') ||
+          error.message?.includes('invalid email') ||
+          error.message?.includes('weak password')) {
+        console.log('ℹ️ [Auth] Tentative d\'inscription échouée:', error.message);
+      } else {
+        // Erreurs inattendues - log error
+        console.error('❌ [Auth] Erreur lors de l\'inscription:', error.message);
+      }
       return { user: null, session: null, error };
     }
 
@@ -98,7 +141,15 @@ export async function signIn(credentials: SignInCredentials): Promise<AuthRespon
     });
 
     if (error) {
-      console.error('❌ [Auth] Erreur lors de la connexion:', error.message);
+      // Erreurs attendues (identifiants invalides, etc.) - log simple
+      if (error.message?.includes('Invalid login credentials') || 
+          error.message?.includes('invalid_credentials') ||
+          error.message?.includes('Email not confirmed')) {
+        console.log('ℹ️ [Auth] Tentative de connexion échouée:', error.message);
+      } else {
+        // Erreurs inattendues - log error
+        console.error('❌ [Auth] Erreur lors de la connexion:', error.message);
+      }
       return { user: null, session: null, error };
     }
 

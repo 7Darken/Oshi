@@ -38,6 +38,7 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
+    // Réinitialiser l'erreur
     setError(null);
 
     // Validation
@@ -65,8 +66,25 @@ export default function RegisterScreen() {
       await signUp({ email, password });
       router.replace('/onboarding');
     } catch (err: any) {
-      console.error('❌ Erreur d\'inscription:', err);
-      setError(err.message || 'Erreur lors de l\'inscription. Réessayez.');
+      // Gérer les différents types d'erreurs
+      const errorMessage = err.message?.toLowerCase() || '';
+      
+      if (errorMessage.includes('user already registered') || 
+          errorMessage.includes('email already exists') ||
+          errorMessage.includes('already in use')) {
+        setError('Cet email est déjà utilisé');
+      } else if (errorMessage.includes('invalid email')) {
+        setError('Format d\'email invalide');
+      } else if (errorMessage.includes('weak password') || 
+                 errorMessage.includes('password is too weak')) {
+        setError('Le mot de passe est trop faible');
+      } else if (errorMessage.includes('network')) {
+        setError('Erreur de connexion. Vérifiez votre connexion internet');
+      } else {
+        // Logger uniquement les erreurs inattendues
+        console.error('❌ Erreur d\'inscription:', err);
+        setError('Erreur lors de l\'inscription. Veuillez réessayer');
+      }
     }
   };
 
@@ -110,7 +128,10 @@ export default function RegisterScreen() {
             label="Email"
             placeholder="Votre adresse email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (error) setError(null);
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -120,7 +141,10 @@ export default function RegisterScreen() {
             label="Mot de passe"
             placeholder="••••••••"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (error) setError(null);
+            }}
             secureTextEntry
             autoCapitalize="none"
           />
@@ -129,7 +153,10 @@ export default function RegisterScreen() {
             label="Confirmer le mot de passe"
             placeholder="••••••••"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              if (error) setError(null);
+            }}
             secureTextEntry
             autoCapitalize="none"
           />

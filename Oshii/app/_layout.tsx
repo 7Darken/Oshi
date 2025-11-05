@@ -6,15 +6,18 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { useDeepLinking } from '@/hooks/useDeepLinking';
+import { CustomAlert } from '@/components/ui/CustomAlert';
 
-export default function RootLayout() {
+function RootNavigator() {
   const colorScheme = useColorScheme();
+  
+  // Gérer les deep links TikTok partagés
+  const { alertState, closeAlert } = useDeepLinking();
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack>
           <Stack.Screen 
             name="welcome" 
             options={{ 
@@ -65,10 +68,26 @@ export default function RootLayout() {
             }} 
           />
           <Stack.Screen 
+            name="not-recipe" 
+            options={{ 
+              headerShown: false,
+              title: 'Aucune recette',
+              presentation: 'card'
+            }} 
+          />
+          <Stack.Screen 
             name="result" 
             options={{ 
               headerShown: false,
               title: 'Recette'
+            }} 
+          />
+          <Stack.Screen 
+            name="steps" 
+            options={{ 
+              headerShown: false,
+              title: 'Étapes',
+              presentation: 'fullScreenModal'
             }} 
           />
                 <Stack.Screen
@@ -99,9 +118,26 @@ export default function RootLayout() {
               title: 'Modal' 
             }} 
           />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      </Stack>
+      <StatusBar style="auto" />
+      
+      {/* Alert pour liens invalides */}
+      <CustomAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        onClose={closeAlert}
+        type="error"
+      />
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootNavigator />
       </AuthProvider>
     </SafeAreaProvider>
   );

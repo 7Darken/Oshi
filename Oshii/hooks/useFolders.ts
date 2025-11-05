@@ -10,6 +10,7 @@ export interface DatabaseFolder {
   id: string;
   user_id: string;
   name: string;
+  icon_name?: string;
   created_at: string;
   recipes_count?: number;
 }
@@ -19,7 +20,7 @@ export interface UseFoldersReturn {
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  createFolder: (name: string) => Promise<DatabaseFolder | null>;
+  createFolder: (name: string, iconName?: string) => Promise<DatabaseFolder | null>;
 }
 
 /**
@@ -109,8 +110,8 @@ export function useFolders(): UseFoldersReturn {
     }
   }, []);
 
-  const createFolder = useCallback(async (name: string): Promise<DatabaseFolder | null> => {
-    console.log('📁 [Folders] Création d\'un dossier:', name);
+  const createFolder = useCallback(async (name: string, iconName: string = 'cooking-pot'): Promise<DatabaseFolder | null> => {
+    console.log('📁 [Folders] Création d\'un dossier:', name, 'avec icône:', iconName);
     setError(null);
 
     try {
@@ -125,6 +126,7 @@ export function useFolders(): UseFoldersReturn {
         .from('folders')
         .insert({
           name: name.trim(),
+          icon_name: iconName,
           user_id: session.user.id,
         })
         .select()

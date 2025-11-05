@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Plus } from 'lucide-react-native';
 import { Colors, Spacing } from '@/constants/theme';
@@ -14,6 +14,11 @@ interface CustomTabBarProps extends BottomTabBarProps {
 export function CustomTabBar({ state, descriptors, navigation, hasRecipes, onAddRecipe }: CustomTabBarProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { width: screenWidth } = useWindowDimensions();
+  
+  // Calculer la position du FAB pour qu'il soit parfaitement centré au milieu de la tab bar
+  // Position = (largeur de l'écran / 2) - (largeur du FAB / 2)
+  const fabPosition = (screenWidth / 2) - 28; // 28 = moitié de 56 (largeur du FAB)
 
   return (
     <View style={[styles.tabBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
@@ -57,7 +62,13 @@ export function CustomTabBar({ state, descriptors, navigation, hasRecipes, onAdd
             {/* Floating Add Button after first tab (index 0) */}
             {index === 0 && hasRecipes && (
               <TouchableOpacity
-                style={[styles.fab, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.fab, 
+                  { 
+                    backgroundColor: colors.primary,
+                    left: fabPosition,
+                  }
+                ]}
                 onPress={onAddRecipe}
                 activeOpacity={0.8}
               >
@@ -94,7 +105,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     top: -28,
-    alignSelf: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

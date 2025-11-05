@@ -22,12 +22,16 @@ export const useRecipeStore = create<ExtendedRecipeStore>((set) => ({
 
   // Actions
   setRecipe: (recipe: Recipe, url: string) => {
+    console.log('📦 [Store] setRecipe appelé');
+    console.log('📦 [Store] Recipe ID:', recipe.id);
+    console.log('📦 [Store] URL:', url);
     set({
       currentRecipe: recipe,
       analyzedUrl: url,
       isLoading: false,
       error: null,
     });
+    console.log('📦 [Store] État mis à jour: isLoading=false, currentRecipe=', recipe.title);
   },
 
   setLoading: (loading: boolean) => {

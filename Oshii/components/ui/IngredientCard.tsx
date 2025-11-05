@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,6 +20,20 @@ export function IngredientCard({
 }: IngredientCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Détecter si on est sur tablette (iPad)
+  const isTablet = windowWidth >= 768;
+  
+  // Adapter le nombre de cartes par ligne selon le type d'appareil
+  const cardsPerRow = isTablet ? 5 : 3;
+  
+  // Calculer la largeur dynamique
+  // Largeur disponible = windowWidth - (padding horizontal gauche + droit)
+  const horizontalPadding = Spacing.lg * 2; // Padding gauche + droite du container
+  const gapBetweenCards = Spacing.lg; // Gap entre les cartes
+  const availableWidth = windowWidth - horizontalPadding;
+  const cardWidth = (availableWidth - (gapBetweenCards * (cardsPerRow - 1))) / cardsPerRow;
 
   const displayQuantity = () => {
     if (ingredient.quantity && ingredient.unit) {
@@ -36,11 +50,23 @@ export function IngredientCard({
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
   };
 
+  // Calculer les tailles proportionnelles basées sur la largeur de la carte
+  const imageSize = Math.max(cardWidth * 0.5, 45); // 50% de la largeur, minimum 45px
+  const fontSize = Math.max(cardWidth * 0.11, 11); // ~11% de la largeur, minimum 11px
+  const quantityFontSize = Math.max(cardWidth * 0.15, 14); // ~15% de la largeur, minimum 14px
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: colors.card, 
+        borderColor: colors.border,
+        width: cardWidth,
+      }
+    ]}>
       {/* Image de l'ingrédient si disponible */}
       {imageUrl ? (
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, { width: imageSize, height: imageSize }]}>
           <ExpoImage
             source={{ uri: imageUrl }}
             style={styles.image}
@@ -49,18 +75,30 @@ export function IngredientCard({
           />
         </View>
       ) : (
-        <View style={[styles.imageContainer, { backgroundColor: colors.secondary }]}>
-          <Text style={[styles.placeholderEmoji, { color: colors.icon }]}>🥘</Text>
+        <View style={[
+          styles.imageContainer, 
+          { 
+            backgroundColor: colors.secondary,
+            width: imageSize, 
+            height: imageSize 
+          }
+        ]}>
+          <Text style={[styles.placeholderEmoji, { color: colors.icon, fontSize: imageSize * 0.4 }]}>
+            🥘
+          </Text>
         </View>
       )}
       
       {/* Nom et quantité */}
       <View style={styles.content}>
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+        <Text 
+          style={[styles.name, { color: colors.text, fontSize }]} 
+          numberOfLines={2}
+        >
           {capitalizeName(ingredient.name)}
         </Text>
         {displayQuantity() && (
-          <Text style={[styles.quantity, { color: colors.text }]}>
+          <Text style={[styles.quantity, { color: colors.text, fontSize: quantityFontSize }]}>
             {displayQuantity()}
           </Text>
         )}
@@ -71,7 +109,7 @@ export function IngredientCard({
 
 const styles = StyleSheet.create({
   container: {
-    width: 100,
+    // width calculée dynamiquement
     borderRadius: BorderRadius.lg,
     padding: Spacing.sm,
     borderWidth: 1,
@@ -85,8 +123,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   imageContainer: {
-    width: 60,
-    height: 60,
+    // width et height calculées dynamiquement
     alignSelf: 'center',
     marginBottom: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -99,20 +136,20 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   placeholderEmoji: {
-    fontSize: 24,
+    // fontSize calculé dynamiquement
   },
   content: {
     alignItems: 'center',
+    flex: 1,
   },
   name: {
-    fontSize: 12,
+    // fontSize calculé dynamiquement
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: Spacing.xs,
-    minHeight: 32,
   },
   quantity: {
-    fontSize: 16,
+    // fontSize calculé dynamiquement
     fontWeight: '700',
     textAlign: 'center',
   },

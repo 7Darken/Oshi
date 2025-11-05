@@ -1,5 +1,7 @@
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { ShoppingCart, Sparkles } from 'lucide-react-native';
 
 import { CustomTabBar } from '@/components/CustomTabBar';
@@ -24,6 +26,14 @@ export default function TabLayout() {
     loadFoodItems();
   }, [loadFoodItems]);
 
+  // Handler pour ouvrir l'AnalyzeSheet avec retour haptique
+  const handleOpenAnalyzeSheet = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    openAnalyzeSheet();
+  }, [openAnalyzeSheet]);
+
   // Handler pour analyser un TikTok (accessible depuis tous les onglets)
   const handleAnalyze = useCallback(async (url: string) => {
     clearRecipe();
@@ -39,7 +49,7 @@ export default function TabLayout() {
           <CustomTabBar
             {...props}
             hasRecipes={hasRecipes}
-            onAddRecipe={openAnalyzeSheet}
+            onAddRecipe={handleOpenAnalyzeSheet}
           />
         )}
         screenOptions={{

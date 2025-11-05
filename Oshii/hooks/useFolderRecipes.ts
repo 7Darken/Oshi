@@ -31,45 +31,50 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
     }
 
     try {
-      // 1. Récupérer les recettes du dossier ou les recettes orphelines si folderId est null
-      let recipesData;
-      let recipesError;
-
+      // Récupérer les recettes avec leurs ingrédients et étapes en une seule requête (optimisé)
+      let result;
+      
       if (folderId === null) {
-        // Récupérer les recettes orphelines (sans folder_id)
-        const result = await supabase
+        // Récupérer les recettes orphelines (sans folder_id) avec jointures
+        result = await supabase
           .from('recipes')
-          .select('*')
+          .select(`
+            *,
+            ingredients(*),
+            steps(*)
+          `)
           .is('folder_id', null)
           .order('created_at', { ascending: false });
-        recipesData = result.data;
-        recipesError = result.error;
         if (!silent) {
           console.log('📖 [FolderRecipes] Récupération des recettes orphelines');
         }
       } else {
-        // Récupérer les recettes d'un dossier spécifique
-        const result = await supabase
+        // Récupérer les recettes d'un dossier spécifique avec jointures
+        result = await supabase
           .from('recipes')
-          .select('*')
+          .select(`
+            *,
+            ingredients(*),
+            steps(*)
+          `)
           .eq('folder_id', folderId)
           .order('created_at', { ascending: false });
-        recipesData = result.data;
-        recipesError = result.error;
         if (!silent) {
           console.log('📖 [FolderRecipes] Récupération des recettes du dossier:', folderId);
         }
       }
 
-      if (recipesError) {
-        console.error('❌ [FolderRecipes] Erreur lors de la récupération:', recipesError);
+      if (result.error) {
+        console.error('❌ [FolderRecipes] Erreur lors de la récupération:', result.error);
         if (!silent) {
-          throw new Error(`Erreur lors de la récupération: ${recipesError.message}`);
+          throw new Error(`Erreur lors de la récupération: ${result.error.message}`);
         }
         return;
       }
 
-      if (!recipesData || recipesData.length === 0) {
+      const recipesData = result.data || [];
+
+      if (recipesData.length === 0) {
         if (silent) {
           console.log('🔄 [FolderRecipes] Refresh silencieux - Aucune recette trouvée');
           setRecipes([]);
@@ -87,30 +92,17 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
         console.log('✅ [FolderRecipes]', recipesData.length, 'recettes trouvées');
       }
 
-      // 2. Pour chaque recette, récupérer les ingrédients et étapes
-      const fullRecipes = await Promise.all(
-        recipesData.map(async (recipe) => {
-          // Récupérer les ingrédients
-          const { data: ingredients } = await supabase
-            .from('ingredients')
-            .select('*')
-            .eq('recipe_id', recipe.id)
-            .order('name');
-
-          // Récupérer les étapes
-          const { data: steps } = await supabase
-            .from('steps')
-            .select('*')
-            .eq('recipe_id', recipe.id)
-            .order('order');
-
-          return {
-            ...recipe,
-            ingredients: ingredients || [],
-            steps: steps || [],
-          };
-        })
-      );
+      // Transformer les données pour correspondre au format attendu
+      // Les jointures Supabase retournent ingredients et steps comme arrays
+      const fullRecipes = recipesData.map((recipe: any) => ({
+        ...recipe,
+        ingredients: (recipe.ingredients || []).sort((a: any, b: any) => 
+          (a.name || '').localeCompare(b.name || '')
+        ),
+        steps: (recipe.steps || []).sort((a: any, b: any) => 
+          (a.order || 0) - (b.order || 0)
+        ),
+      }));
 
       if (!silent) {
         console.log('✅ [FolderRecipes] Recettes complètes récupérées avec succès');

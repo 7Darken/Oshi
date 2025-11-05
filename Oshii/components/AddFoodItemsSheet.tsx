@@ -2,24 +2,23 @@
  * Composant AddFoodItemsSheet - Sheet pour sélectionner des food_items et les ajouter à la liste de courses
  */
 
-import React, { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/Button';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useFoodItems } from '@/hooks/useFoodItems';
+import { FoodItem } from '@/stores/useFoodItemsStore';
+import { Image as ExpoImage } from 'expo-image';
+import { Check, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Modal,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  Text,
   TextInput,
-  ActivityIndicator,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { X, Check } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Button } from '@/components/ui/Button';
-import { FoodItem } from '@/stores/useFoodItemsStore';
-import { useFoodItems } from '@/hooks/useFoodItems';
 
 interface AddFoodItemsSheetProps {
   visible: boolean;
@@ -30,6 +29,16 @@ interface AddFoodItemsSheetProps {
 
 function capitalizeName(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function normalizeCategoryName(category: string): string {
+  // Remplacer les underscores par des espaces
+  const normalized = category.replace(/_/g, ' ');
+  // Capitaliser chaque mot
+  return normalized
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 export function AddFoodItemsSheet({
@@ -51,6 +60,22 @@ export function AddFoodItemsSheet({
     }
     return searchFoodItems(searchQuery);
   }, [foodItems, searchQuery, searchFoodItems]);
+
+  // Grouper les food_items par catégorie
+  const groupedByCategory = useMemo(() => {
+    const groups: Record<string, FoodItem[]> = {};
+    
+    filteredFoodItems.forEach((item) => {
+      const category = item.category || 'Autres';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(item);
+    });
+    
+    // Trier les catégories alphabétiquement
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredFoodItems]);
 
   const toggleFoodItem = (foodItemId: string) => {
     const newSelected = new Set(selectedFoodItemIds);
@@ -87,13 +112,13 @@ export function AddFoodItemsSheet({
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Ajouter des ingrédients
           </Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <X size={24} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
@@ -122,48 +147,58 @@ export function AddFoodItemsSheet({
               </Text>
             </View>
           ) : (
-            filteredFoodItems.map((foodItem) => {
-              const isSelected = selectedFoodItemIds.has(foodItem.id);
-              return (
-                <TouchableOpacity
-                  key={foodItem.id}
-                  style={[
-                    styles.foodItemCard,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    isSelected && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
-                  onPress={() => toggleFoodItem(foodItem.id)}
-                  activeOpacity={0.7}
-                >
-                  {/* Checkbox */}
-                  <View
-                    style={[
-                      styles.checkbox,
-                      { borderColor: colors.border },
-                      isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
-                    ]}
-                  >
-                    {isSelected && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
-                  </View>
+            groupedByCategory.map(([category, items]) => (
+              <View key={category} style={styles.categorySection}>
+                {/* Titre de catégorie */}
+                <Text style={[styles.categoryTitle, { color: colors.icon }]}>
+                  {normalizeCategoryName(category)}
+                </Text>
+                
+                {/* Items de la catégorie */}
+                {items.map((foodItem) => {
+                  const isSelected = selectedFoodItemIds.has(foodItem.id);
+                  return (
+                    <TouchableOpacity
+                      key={foodItem.id}
+                      style={[
+                        styles.foodItemCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        isSelected && { borderColor: colors.primary, borderWidth: 2 },
+                      ]}
+                      onPress={() => toggleFoodItem(foodItem.id)}
+                      activeOpacity={0.7}
+                    >
+                      {/* Checkbox */}
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: colors.border },
+                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                        ]}
+                      >
+                        {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+                      </View>
 
-                  {/* Image */}
-                  {foodItem.image_url ? (
-                    <ExpoImage
-                      source={{ uri: foodItem.image_url }}
-                      style={styles.foodItemImage}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={[styles.foodItemImagePlaceholder, { backgroundColor: colors.secondary }]} />
-                  )}
+                      {/* Image */}
+                      {foodItem.image_url ? (
+                        <ExpoImage
+                          source={{ uri: foodItem.image_url }}
+                          style={styles.foodItemImage}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View style={[styles.foodItemImagePlaceholder, { backgroundColor: colors.secondary }]} />
+                      )}
 
-                  {/* Name */}
-                  <Text style={[styles.foodItemName, { color: colors.text }]} numberOfLines={2}>
-                    {capitalizeName(foodItem.name)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })
+                      {/* Name */}
+                      <Text style={[styles.foodItemName, { color: colors.text }]} numberOfLines={2}>
+                        {capitalizeName(foodItem.name)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))
           )}
         </ScrollView>
 
@@ -230,36 +265,47 @@ const styles = StyleSheet.create({
   foodItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderRadius: BorderRadius.sm,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
   foodItemImage: {
-    width: 48,
-    height: 48,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.sm,
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
   foodItemImagePlaceholder: {
-    width: 48,
-    height: 48,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.sm,
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
   foodItemName: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
+  },
+  categorySection: {
+    marginBottom: Spacing.xl,
+  },
+  categoryTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+    opacity: 0.7,
   },
   emptyContainer: {
     alignItems: 'center',

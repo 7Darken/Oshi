@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Clock, Users, ArrowLeft, Share2, Folder, ShoppingCart, Minus, Plus, Bookmark } from 'lucide-react-native';
+import { Clock, Users, ArrowLeft, Share2, Folder, ShoppingCart, Minus, Plus, Bookmark, Play } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -433,7 +433,7 @@ export default function ResultScreen() {
       setIsUpdatingFolder(false);
     }
   };
-
+console.log(recipe.steps);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -714,39 +714,78 @@ export default function ResultScreen() {
       {recipe && (
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <View style={styles.footerContent}>
-            {adjustedIngredients && adjustedIngredients.length > 0 && (
+            {/* Bouton Play pour ouvrir les étapes - À gauche */}
+            {recipe.steps && recipe.steps.length > 0 && (
               <TouchableOpacity
-                onPress={() => setShowSelectIngredients(true)}
-                style={[styles.addToCartButton, { backgroundColor: colors.card }]}
-                activeOpacity={0.7}
+                onPress={() => {
+                  const recipeId = params.recipeId || (currentRecipe?.id as string);
+                  if (recipeId) {
+                    router.push(`/steps?recipeId=${recipeId}` as any);
+                  } else {
+                    // Si pas de recipeId, passer les données via le store temporairement
+                    router.push('/steps' as any);
+                  }
+                }}
+                style={[
+                  styles.playButton,
+                  {
+                    backgroundColor: colors.primary,
+                  }
+                ]}
+                activeOpacity={0.8}
               >
-                <ShoppingCart size={18} color={colors.text} />
-                <Text style={[styles.addToCartText, { color: colors.text }]}>
-                  Ajouter aux courses
-                </Text>
+                <Play size={20} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
+                <Text style={styles.playButtonText}>Cuisiner</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={() => setShowFolderSelector(true)}
-              style={[
-                styles.saveButton,
-                !currentFolder
-                  ? {
-                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            
+            {/* Boutons course et bookmark - À droite */}
+            <View style={styles.rightButtons}>
+              {adjustedIngredients && adjustedIngredients.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setShowSelectIngredients(true)}
+                  style={[
+                    styles.addToCartButton,
+                    {
+                      backgroundColor: 'rgba(30, 30, 30, 0.6)',
                       borderWidth: 1.5,
                       borderColor: colors.primary,
                     }
-                  : { backgroundColor: colors.primary },
-              ]}
-              activeOpacity={0.8}
-            >
-              <Bookmark
-                size={20}
-                color={!currentFolder ? colors.primary : '#FFFFFF'}
-                strokeWidth={2}
-                fill={!currentFolder ? colors.primary : '#FFFFFF'}
-              />
-            </TouchableOpacity>
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <ShoppingCart
+                    size={20}
+                    color={colors.primary}
+                    strokeWidth={2}
+                  />
+                  <View style={styles.addToCartBadge}>
+                    <Plus size={10} color="#FFFFFF" strokeWidth={3} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => setShowFolderSelector(true)}
+                style={[
+                  styles.saveButton,
+                  !currentFolder
+                    ? {
+                        backgroundColor: 'rgba(30, 30, 30, 0.6)',
+                        borderWidth: 1.5,
+                        borderColor: colors.primary,
+                      }
+                    : { backgroundColor: colors.primary },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Bookmark
+                  size={20}
+                  color={!currentFolder ? colors.primary : '#FFFFFF'}
+                  strokeWidth={2}
+                  fill={!currentFolder ? colors.primary : '#FFFFFF'}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -968,16 +1007,34 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   addToCartButton: {
-    flexDirection: 'row',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    position: 'relative',
   },
-  addToCartText: {
-    fontSize: 13,
-    fontWeight: '600',
+  addToCartBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F9403C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: '#FFFFFF',
+    zIndex: 1,
   },
   footer: {
     borderTopWidth: 1,
@@ -990,7 +1047,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.md,
+  },
+  playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  playButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   saveButton: {
     width: 56,
@@ -1050,11 +1133,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.lg,
+    justifyContent: 'flex-start',
   },
   ingredientsGridFull: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.lg,
+    justifyContent: 'flex-start',
   },
   showMoreButton: {
     flexDirection: 'row',

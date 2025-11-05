@@ -2,33 +2,44 @@
  * Écran d'onboarding - 3 étapes pour les nouveaux utilisateurs
  */
 
-import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/Button';
+import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { ProfileTypeIcon } from '@/components/ui/ProfileTypeIcon';
+import { StepProgress } from '@/components/ui/StepProgress';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { supabase } from '@/services/supabase';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Button } from '@/components/ui/Button';
-import { OshiiLogo } from '@/components/ui/OshiiLogo';
-import { supabase } from '@/services/supabase';
-import { useAuthContext } from '@/contexts/AuthContext';
 
 type Step = 1 | 2 | 3;
+
+type ProfileType = 'survivaliste' | 'cuisinier' | 'sportif';
+
+// Images du tutoriel
+const tutorialImages = [
+  require('@/assets/Tutorial/screen1.png'),
+  require('@/assets/Tutorial/screen2.png'),
+  require('@/assets/Tutorial/screen3.png'),
+];
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [username, setUsername] = useState('');
-  const [skillLevel, setSkillLevel] = useState<string | null>(null);
-  const [goal, setGoal] = useState<string | null>(null);
+  const [profileType, setProfileType] = useState<ProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -62,17 +73,30 @@ export default function OnboardingScreen() {
     }
   }, [profile?.username, user?.user_metadata, username]);
 
-  const skillLevels = [
-    { id: 'beginner', label: 'Débutant', description: 'Je découvre la cuisine' },
-    { id: 'intermediate', label: 'Intermédiaire', description: 'J\'ai quelques bases' },
-    { id: 'expert', label: 'Expert', description: 'Je maîtrise la cuisine' },
+  const profileTypes: { id: ProfileType; label: string; description: string }[] = [
+    { 
+      id: 'survivaliste', 
+      label: 'Survivaliste', 
+      description: 'Recettes simples et efficaces',
+    },
+    { 
+      id: 'cuisinier', 
+      label: 'Cuisinier', 
+      description: 'Passion pour la gastronomie',
+    },
+    { 
+      id: 'sportif', 
+      label: 'Sportif', 
+      description: 'Alimentation équilibrée et healthy',
+    },
   ];
 
-  const goals = [
-    { id: 'discover', label: 'Découvrir', description: 'Explorer de nouvelles recettes' },
-    { id: 'improve', label: 'Progresser', description: 'Améliorer mes compétences' },
-    { id: 'share', label: 'Partager', description: 'Partager mes créations' },
-  ];
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as Step);
+    }
+  };
 
   const handleNext = async () => {
     if (currentStep === 1) {
@@ -81,14 +105,11 @@ export default function OnboardingScreen() {
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (!skillLevel) {
+      if (!profileType) {
         return;
       }
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      if (!goal) {
-        return;
-      }
       await handleComplete();
     }
   };
@@ -107,6 +128,7 @@ export default function OnboardingScreen() {
         .upsert({
           id: user.id,
           username: username.trim(),
+          profile_type: profileType,
           onboarding_completed: true,
         });
 
@@ -130,8 +152,8 @@ export default function OnboardingScreen() {
 
   const canProceed = () => {
     if (currentStep === 1) return username.trim().length > 0;
-    if (currentStep === 2) return skillLevel !== null;
-    if (currentStep === 3) return goal !== null;
+    if (currentStep === 2) return profileType !== null;
+    if (currentStep === 3) return true; // L'étape 3 n'a plus besoin de sélection
     return false;
   };
 
@@ -140,30 +162,18 @@ export default function OnboardingScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Barre de progression en haut */}
+      <StepProgress totalSteps={3} currentStep={currentStep} />
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header avec logo */}
+        {/* Header avec logo et texte */}
         <View style={styles.header}>
           <OshiiLogo size="md" />
-        </View>
-
-        {/* Indicateur de progression */}
-        <View style={styles.progressContainer}>
-          {[1, 2, 3].map((step) => (
-            <View
-              key={step}
-              style={[
-                styles.progressDot,
-                {
-                  backgroundColor:
-                    step <= currentStep ? colors.primary : colors.border,
-                },
-              ]}
-            />
-          ))}
+          <Text style={[styles.logoText, { color: colors.text }]}>Oshii</Text>
         </View>
 
         {/* Contenu de l'étape */}
@@ -174,7 +184,7 @@ export default function OnboardingScreen() {
                 Quel est votre prénom ?
               </Text>
               <Text style={[styles.stepDescription, { color: colors.icon }]}>
-                Nous l'utiliserons pour personnaliser votre expérience
+                Nous l&apos;utiliserons pour personnaliser votre expérience
               </Text>
               <TextInput
                 style={[
@@ -199,54 +209,46 @@ export default function OnboardingScreen() {
           {currentStep === 2 && (
             <View style={styles.stepContent}>
               <Text style={[styles.stepTitle, { color: colors.text }]}>
-                Quel est votre niveau ?
+                Quel est votre profil ?
               </Text>
               <Text style={[styles.stepDescription, { color: colors.icon }]}>
                 Cela nous aide à vous proposer des recettes adaptées
               </Text>
               <View style={styles.optionsContainer}>
-                {skillLevels.map((level) => (
+                {profileTypes.map((type) => (
                   <TouchableOpacity
-                    key={level.id}
+                    key={type.id}
                     style={[
                       styles.optionCard,
                       {
-                        backgroundColor:
-                          skillLevel === level.id
-                            ? colors.primary
-                            : colors.card,
+                        backgroundColor: colors.card,
                         borderColor:
-                          skillLevel === level.id
+                          profileType === type.id
                             ? colors.primary
                             : colors.border,
                       },
                     ]}
-                    onPress={() => setSkillLevel(level.id)}
+                    onPress={() => setProfileType(type.id)}
                     activeOpacity={0.7}
                   >
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        {
-                          color:
-                            skillLevel === level.id ? '#FFFFFF' : colors.text,
-                        },
-                      ]}
-                    >
-                      {level.label}
-                    </Text>
+                    <View style={styles.optionHeader}>
+                      <ProfileTypeIcon profileType={type.id} size={48} />
+                      <Text
+                        style={[
+                          styles.optionLabel,
+                          { color: colors.text },
+                        ]}
+                      >
+                        {type.label}
+                      </Text>
+                    </View>
                     <Text
                       style={[
                         styles.optionDescription,
-                        {
-                          color:
-                            skillLevel === level.id
-                              ? 'rgba(255, 255, 255, 0.8)'
-                              : colors.icon,
-                        },
+                        { color: colors.icon },
                       ]}
                     >
-                      {level.description}
+                      {type.description}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -255,67 +257,75 @@ export default function OnboardingScreen() {
           )}
 
           {currentStep === 3 && (
-            <View style={styles.stepContent}>
-              <Text style={[styles.stepTitle, { color: colors.text }]}>
-                Quel est votre objectif ?
-              </Text>
-              <Text style={[styles.stepDescription, { color: colors.icon }]}>
-                Dites-nous ce qui vous motive
-              </Text>
-              <View style={styles.optionsContainer}>
-                {goals.map((g) => (
-                  <TouchableOpacity
-                    key={g.id}
-                    style={[
-                      styles.optionCard,
-                      {
-                        backgroundColor:
-                          goal === g.id ? colors.primary : colors.card,
-                        borderColor: goal === g.id ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => setGoal(g.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        {
-                          color: goal === g.id ? '#FFFFFF' : colors.text,
-                        },
-                      ]}
-                    >
-                      {g.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.optionDescription,
-                        {
-                          color:
-                            goal === g.id
-                              ? 'rgba(255, 255, 255, 0.8)'
-                              : colors.icon,
-                        },
-                      ]}
-                    >
-                      {g.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            <View style={styles.stepContentNoHorizontalPadding}>
+              <View style={styles.step3TextContainer}>
+                <Text style={[styles.stepTitle, { color: colors.text }]}>
+                  Transforme tes vidéos
+                </Text>
+                <Text style={[styles.stepDescription, { color: colors.icon }]}>
+                  Apprenez à utiliser l&apos;application en quelques étapes
+                </Text>
               </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tutorialContainer}
+                style={styles.tutorialScrollView}
+              >
+                {tutorialImages.map((image, index) => {
+                  const imageKey = `tutorial-${index}`;
+                  return (
+                    <View
+                      key={imageKey}
+                      style={styles.tutorialImageWrapper}
+                    >
+                      <ExpoImage
+                        source={image}
+                        style={styles.tutorialImage}
+                        contentFit="contain"
+                        transition={200}
+                      />
+                    </View>
+                  );
+                })}
+              </ScrollView>
             </View>
           )}
         </View>
 
-        {/* Bouton suivant */}
+        {/* Boutons de navigation */}
         <View style={styles.footer}>
-          <Button
-            title={currentStep === 3 ? 'Commencer' : 'Suivant'}
-            onPress={handleNext}
-            disabled={!canProceed() || isLoading}
-            loading={isLoading}
-            style={styles.nextButton}
-          />
+          <View style={styles.navigationButtons}>
+            {/* Bouton Retour (visible uniquement si currentStep > 1) */}
+            {currentStep > 1 && (
+              <TouchableOpacity
+                style={[
+                  styles.backButton,
+                  {
+                    backgroundColor: 'transparent',
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={handleBack}
+                disabled={isLoading}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={20} color={colors.text} strokeWidth={2.5} />
+                <Text style={[styles.backButtonText, { color: colors.text }]}>
+                  Retour
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Bouton Suivant */}
+            <Button
+              title={currentStep === 3 ? `C'est parti !` : 'Suivant'}
+              onPress={handleNext}
+              disabled={!canProceed() || isLoading}
+              loading={isLoading}
+              style={styles.nextButton}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -328,32 +338,36 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xxl,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: Spacing.xxl,
-  },
-  progressContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
     gap: Spacing.sm,
-    marginBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.lg,
   },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  logoText: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginLeft: -Spacing.sm,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: Spacing.lg,
   },
   stepContent: {
     alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  stepContentNoHorizontalPadding: {
+    alignItems: 'center',
+  },
+  step3TextContainer: {
+    paddingHorizontal: Spacing.lg,
   },
   stepTitle: {
     fontSize: 28,
@@ -378,27 +392,86 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     width: '100%',
-    gap: Spacing.md,
+    flexDirection: 'row',
+    gap: Spacing.sm,
     marginTop: Spacing.md,
   },
   optionCard: {
-    padding: Spacing.lg,
+    flex: 1,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 2,
+    alignItems: 'center',
+  },
+  optionHeader: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
   },
   optionLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: Spacing.xs,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: Spacing.sm,
   },
   optionDescription: {
-    fontSize: 14,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  tutorialScrollView: {
+    marginTop: Spacing.lg,
+  },
+  tutorialContainer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  tutorialImageWrapper: {
+    width: 200,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tutorialImage: {
+    width: 200,
+    aspectRatio: 9 / 16, // Format portrait standard pour les captures d'écran
   },
   footer: {
     marginTop: Spacing.xxl,
+    paddingHorizontal: Spacing.lg,
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
+    gap: Spacing.xs,
+    minWidth: 100,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   nextButton: {
-    width: '100%',
+    flex: 1,
   },
 });
 

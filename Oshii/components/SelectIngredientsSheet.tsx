@@ -110,18 +110,22 @@ export function SelectIngredientsSheet({
                 onPress={() => toggleIngredient(index)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.ingredientRow, isSelected && styles.ingredientRowSelected]}>
-                  {/* Image */}
-                  {ingredient.imageUrl && (
-                    <View style={styles.imageContainer}>
+                <View style={styles.ingredientRow}>
+                  {/* Image ou icône par défaut */}
+                  <View style={styles.imageContainer}>
+                    {ingredient.imageUrl ? (
                       <ExpoImage
                         source={{ uri: ingredient.imageUrl }}
                         style={styles.image}
                         contentFit="contain"
                         transition={200}
                       />
-                    </View>
-                  )}
+                    ) : (
+                      <View style={[styles.placeholderContainer, { backgroundColor: colors.secondary }]}>
+                        <Text style={styles.placeholderEmoji}>🥘</Text>
+                      </View>
+                    )}
+                  </View>
 
                   {/* Nom et quantité */}
                   <View style={styles.ingredientInfo}>
@@ -139,7 +143,10 @@ export function SelectIngredientsSheet({
                   <View
                     style={[
                       styles.checkbox,
-                      isSelected && { backgroundColor: colors.primary },
+                      isSelected && { 
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
                     ]}
                   >
                     {isSelected && <Check size={20} color="#FFFFFF" strokeWidth={3} />}
@@ -207,9 +214,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     backgroundColor: 'transparent',
   },
-  ingredientRowSelected: {
-    backgroundColor: 'rgba(249, 64, 60, 0.1)',
-  },
   imageContainer: {
     width: 40,
     height: 40,
@@ -220,6 +224,15 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderEmoji: {
+    fontSize: 20,
   },
   ingredientInfo: {
     flex: 1,

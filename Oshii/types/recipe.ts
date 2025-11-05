@@ -19,6 +19,7 @@ export interface Step {
   text: string;
   duration?: string | null;
   temperature?: string | null;
+  ingredients_used?: string[] | null;
 }
 
 export interface Recipe {
