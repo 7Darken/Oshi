@@ -2,27 +2,39 @@
  * Route racine - Redirection automatique selon l'état d'authentification
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useRootNavigationState } from 'expo-router';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { supabase } from '@/services/supabase';
 
 export default function IndexScreen() {
   const router = useRouter();
+  const navigationState = useRootNavigationState();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { isAuthenticated, isLoading, user } = useAuthContext();
+  const { isAuthenticated, isLoading, user, profile, session, isOffline, safeFetchProfile } = useAuthContext();
+  const isNavigationReady = navigationState?.key != null;
+  const hasLocalSession = !!(session?.user?.id || user?.id);
+  const safeFetchProfileRef = useRef(safeFetchProfile);
+
+  useEffect(() => {
+    safeFetchProfileRef.current = safeFetchProfile;
+  }, [safeFetchProfile]);
 
   // Rediriger selon l'état d'authentification et onboarding
   useEffect(() => {
+    if (!isNavigationReady) {
+      console.log('⏳ [Index] Navigation non prête, attente...');
+      return;
+    }
+
     const checkOnboarding = async () => {
       // Si on charge encore, ne rien faire
       if (isLoading) {
@@ -31,45 +43,51 @@ export default function IndexScreen() {
       }
 
       console.log('🔄 [Index] Vérification authentification et onboarding...');
-      console.log('🔄 [Index] État:', { isLoading, isAuthenticated, hasUser: !!user?.id });
+      console.log('🔄 [Index] État:', {
+        isLoading,
+        isAuthenticated,
+        hasLocalSession,
+        isOffline,
+        onboardingFromProfile: profile?.onboarding_completed,
+      });
 
-      if (isAuthenticated && user?.id) {
-        try {
-          // Vérifier si l'onboarding est complété
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('onboarding_completed')
-            .eq('id', user.id)
-            .single();
+      if (!hasLocalSession) {
+        console.log('🔄 [Index] Aucune session locale, redirection vers welcome');
+        router.replace('/welcome');
+        return;
+      }
 
-          if (error && error.code !== 'PGRST116') {
-            // PGRST116 = pas de ligne trouvée, ce qui est normal pour un nouveau compte
-            console.error('❌ [Index] Erreur lors de la vérification du profil:', error);
-          }
+      if (isOffline) {
+        console.log('✅ [Index] Mode hors ligne détecté, redirection vers tabs sans vérification distante');
+        router.replace('/(tabs)');
+        return;
+      }
 
-          console.log('📋 [Index] Profil:', { exists: !!profile, onboardingCompleted: profile?.onboarding_completed });
+      const ensureOnboarding = async () => {
+        let onboardingCompleted = profile?.onboarding_completed;
 
-          // Si pas de profil ou onboarding non complété, rediriger vers onboarding
-          if (!profile || !profile.onboarding_completed) {
-            console.log('🔄 [Index] Redirection vers onboarding');
-            router.replace('/onboarding');
-          } else {
-            console.log('🔄 [Index] Redirection vers tabs');
-            router.replace('/(tabs)');
-          }
-        } catch (err) {
-          console.error('❌ [Index] Erreur lors de la vérification:', err);
-          // En cas d'erreur, rediriger vers onboarding par sécurité
+        if (onboardingCompleted == null) {
+          const latest = await safeFetchProfileRef.current?.();
+          onboardingCompleted = latest?.onboarding_completed ?? true;
+          console.log('📋 [Index] Profil rafraîchi:', {
+            onboardingCompleted,
+          });
+        }
+
+        if (onboardingCompleted) {
+          console.log('✅ [Index] Onboarding confirmé, redirection vers tabs');
+          router.replace('/(tabs)');
+        } else {
+          console.log('🔄 [Index] Onboarding requis, redirection vers onboarding');
           router.replace('/onboarding');
         }
-      } else if (!isLoading && !isAuthenticated) {
-        console.log('🔄 [Index] Non authentifié, redirection vers welcome');
-        router.replace('/welcome');
-      }
+      };
+
+      await ensureOnboarding();
     };
 
-    checkOnboarding();
-  }, [isAuthenticated, isLoading, user, router]);
+    void checkOnboarding();
+  }, [isNavigationReady, isLoading, hasLocalSession, isOffline, isAuthenticated, profile?.onboarding_completed, router]);
 
   // Afficher un loader pendant le chargement de l'auth
   return (

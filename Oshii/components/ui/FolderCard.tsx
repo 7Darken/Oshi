@@ -48,18 +48,19 @@ const getIconComponent = (iconName: string = 'cooking-pot') => {
   return IconComponent;
 };
 
-export function FolderCard({
+export const FolderCard = React.memo(({
   name,
   recipeCount,
   iconName = 'cooking-pot',
   onPress,
   onOptionsPress,
-}: FolderCardProps) {
+}: FolderCardProps) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  const folderColor = getFolderColor(name);
-  const IconComponent = getIconComponent(iconName);
+
+  // Mémoïser le calcul de la couleur pour éviter de recalculer à chaque render
+  const folderColor = React.useMemo(() => getFolderColor(name), [name]);
+  const IconComponent = React.useMemo(() => getIconComponent(iconName), [iconName]);
 
   return (
     <TouchableOpacity
@@ -96,7 +97,9 @@ export function FolderCard({
       </Text>
     </TouchableOpacity>
   );
-}
+});
+
+FolderCard.displayName = 'FolderCard';
 
 const styles = StyleSheet.create({
   card: {

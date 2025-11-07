@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Trash2, X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
@@ -35,6 +36,10 @@ export function ConfirmDeleteSheet({
 }: ConfirmDeleteSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Déterminer si on doit afficher les boutons en colonne sur les petits écrans
+  const isSmallScreen = windowWidth < 350;
 
   const handleConfirm = async () => {
     await onConfirm();
@@ -60,13 +65,20 @@ export function ConfirmDeleteSheet({
           {/* Message */}
           <Text style={[styles.message, { color: colors.icon }]}>{message}</Text>
 
-          {/* Buttons */}
-          <View style={styles.buttonsContainer}>
+          {/* Buttons - Responsive: colonne sur petits écrans, ligne sur grands écrans */}
+          <View style={[
+            styles.buttonsContainer,
+            isSmallScreen && styles.buttonsContainerColumn
+          ]}>
             <Button
               title="Annuler"
               onPress={onClose}
               variant="primary"
-              style={[styles.cancelButton, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}
+              style={
+                isSmallScreen
+                  ? [styles.buttonFullWidth, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]
+                  : [styles.cancelButton, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]
+              }
               textStyle={{ color: colors.text }}
               disabled={isDeleting}
             />
@@ -74,7 +86,11 @@ export function ConfirmDeleteSheet({
               title="Supprimer"
               onPress={handleConfirm}
               variant="primary"
-              style={[styles.deleteButton, { backgroundColor: colors.destructive }]}
+              style={
+                isSmallScreen
+                  ? [styles.buttonFullWidth, { backgroundColor: colors.destructive }]
+                  : [styles.deleteButton, { backgroundColor: colors.destructive }]
+              }
               disabled={isDeleting}
               loading={isDeleting}
             />
@@ -125,11 +141,21 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     width: '100%',
   },
+  buttonsContainerColumn: {
+    flexDirection: 'column',
+    gap: Spacing.sm,
+  },
   cancelButton: {
     flex: 1,
+    minHeight: 48,
   },
   deleteButton: {
     flex: 1,
+    minHeight: 48,
+  },
+  buttonFullWidth: {
+    flex: 0,
+    width: '100%',
   },
 });
 

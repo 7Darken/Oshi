@@ -135,6 +135,7 @@ export default function HomeScreen() {
   const { folders, createFolder, refresh: refreshFolders } = useFolders();
   const { isPremium, profile, refreshFreeGenerations, user } = useAuthContext();
   const hasOpenedPaywall = useRef(false);
+  const lastRefreshTime = useRef<number>(0);
   
   // Calculer la largeur des cartes pour 2 par ligne
   const cardWidth = useMemo(() => {
@@ -189,27 +190,48 @@ export default function HomeScreen() {
     return !!newFolder;
   };
 
-  // Rafraîchir les dossiers, recettes et free_generations_remaining quand l'écran redevient actif (optimisé)
+  // Rafraîchir les dossiers, recettes et free_generations_remaining quand l'écran redevient actif (optimisé avec debounce)
   useFocusEffect(
     useCallback(() => {
-      // Rafraîchir silencieusement sans mettre en loading (pour éviter la disparition du header)
-      refreshFolders().catch(err => {
-        console.error('❌ [Home] Erreur lors du refresh des dossiers:', err);
-      });
-      refreshRecipes().catch(err => {
-        console.error('❌ [Home] Erreur lors du refresh des recettes:', err);
-      });
-      
+      // Debounce: éviter les refresh trop fréquents (minimum 2 secondes entre chaque refresh)
+      const now = Date.now();
+      const timeSinceLastRefresh = now - lastRefreshTime.current;
+
+      if (timeSinceLastRefresh < 2000) {
+        console.log('🔒 [Home] Refresh ignoré (debounce:', timeSinceLastRefresh, 'ms)');
+        return;
+      }
+
+      lastRefreshTime.current = now;
+      console.log('🔄 [Home] Refresh silencieux des données...');
+
+      // Utiliser Promise.all pour paralléliser les requêtes au lieu de les lancer séquentiellement
+      const refreshPromises = [
+        refreshFolders().catch(err => {
+          console.error('❌ [Home] Erreur lors du refresh des dossiers:', err);
+        }),
+        refreshRecipes().catch(err => {
+          console.error('❌ [Home] Erreur lors du refresh des recettes:', err);
+        }),
+      ];
+
       // Rafraîchir free_generations_remaining uniquement pour les non-premium (silencieux)
       if (!isPremium) {
-        refreshFreeGenerations(true).catch(err => {
-          // Erreur silencieuse, ne pas logger en prod pour éviter le spam
-          if (__DEV__) {
-            console.error('❌ [Home] Erreur lors du refresh de free_generations_remaining:', err);
-          }
-        });
+        refreshPromises.push(
+          refreshFreeGenerations(true).catch(err => {
+            // Erreur silencieuse, ne pas logger en prod pour éviter le spam
+            if (__DEV__) {
+              console.error('❌ [Home] Erreur lors du refresh de free_generations_remaining:', err);
+            }
+          })
+        );
       }
-    }, [refreshFolders, refreshRecipes, isPremium, refreshFreeGenerations])
+
+      // Attendre que toutes les requêtes soient terminées
+      Promise.all(refreshPromises).then(() => {
+        console.log('✅ [Home] Refresh terminé');
+      });
+    }, [isPremium])
   );
 
   return (

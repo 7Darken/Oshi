@@ -1,51 +1,12 @@
 /**
  * Hook pour gérer les recettes de l'utilisateur
- * Récupération et gestion via Supabase
+ * Récupération et gestion via le store Zustand + Supabase
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/services/supabase';
-
-export interface DatabaseRecipe {
-  id: string;
-  user_id: string;
-  folder_id: string | null;
-  title: string;
-  servings: number | null;
-  prep_time: string | null;
-  cook_time: string | null;
-  total_time: string | null;
-  source_url: string | null;
-  image_url: string | null;
-  created_at: string;
-  calories: number | null;
-  proteins: number | null;
-  carbs: number | null;
-  fats: number | null;
-}
-
-export interface DatabaseIngredient {
-  id: string;
-  recipe_id: string;
-  name: string;
-  quantity: string | null;
-  unit: string | null;
-  food_item_id: string | null;
-}
-
-export interface DatabaseStep {
-  id: string;
-  recipe_id: string;
-  order: number;
-  text: string;
-  duration: string | null;
-  temperature: string | null;
-}
-
-export interface FullRecipe extends DatabaseRecipe {
-  ingredients: DatabaseIngredient[];
-  steps: DatabaseStep[];
-}
+import { useCallback, useEffect, useRef } from 'react';
+import { useRecipeStore } from '@/stores/useRecipeStore';
+import { FullRecipe } from '@/types/recipe';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 
 export interface UseRecipesReturn {
   recipes: FullRecipe[];
@@ -59,117 +20,67 @@ export interface UseRecipesReturn {
  * @returns Objet contenant les recettes, l'état de chargement et les erreurs
  */
 export function useRecipes(): UseRecipesReturn {
-  const [recipes, setRecipes] = useState<FullRecipe[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchRecipes = useCallback(async (silent: boolean = false) => {
-    if (!silent) {
-      console.log('📖 [Recipes] Récupération des recettes...');
-      setIsLoading(true);
-      setError(null);
-    }
-
-    try {
-      // Récupérer les recettes avec leurs ingrédients et étapes en une seule requête (optimisé)
-      const { data: recipesData, error: recipesError } = await supabase
-        .from('recipes')
-        .select(`
-          *,
-          ingredients(*),
-          steps(*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (recipesError) {
-        console.error('❌ [Recipes] Erreur lors de la récupération:', recipesError);
-        if (!silent) {
-          throw new Error(`Erreur lors de la récupération: ${recipesError.message}`);
-        }
-        return;
-      }
-
-      if (!recipesData || recipesData.length === 0) {
-        if (silent) {
-          console.log('🔄 [Recipes] Refresh silencieux - Aucune recette trouvée');
-        } else {
-          console.log('✅ [Recipes] Aucune recette trouvée');
-          setRecipes([]);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (silent) {
-        console.log('🔄 [Recipes] Refresh silencieux des recettes...');
-      } else {
-        console.log('✅ [Recipes]', recipesData.length, 'recettes trouvées');
-      }
-
-      // Transformer les données pour correspondre au format attendu
-      // Les jointures Supabase retournent ingredients et steps comme arrays
-      const fullRecipes = recipesData.map((recipe: any) => ({
-        ...recipe,
-        ingredients: (recipe.ingredients || []).sort((a: any, b: any) => 
-          (a.name || '').localeCompare(b.name || '')
-        ),
-        steps: (recipe.steps || []).sort((a: any, b: any) => 
-          (a.order || 0) - (b.order || 0)
-        ),
-      }));
-
-      if (!silent) {
-        console.log('✅ [Recipes] Recettes complètes récupérées avec succès');
-      }
-
-      // Vérifier si les données ont vraiment changé avant de mettre à jour l'état
-      setRecipes(prevRecipes => {
-        const prevIds = new Set(prevRecipes.map(r => r.id));
-        const newIds = new Set(fullRecipes.map(r => r.id));
-        
-        // Vérifier si les IDs sont identiques
-        if (prevIds.size === newIds.size && [...prevIds].every(id => newIds.has(id))) {
-          // Vérifier si les données des recettes ont changé (folder_id, etc.)
-          const hasChanges = fullRecipes.some(newRecipe => {
-            const prevRecipe = prevRecipes.find(r => r.id === newRecipe.id);
-            return !prevRecipe || 
-                   prevRecipe.folder_id !== newRecipe.folder_id ||
-                   prevRecipe.title !== newRecipe.title;
-          });
-          
-          if (!hasChanges) {
-            // Aucun changement, retourner les références précédentes
-            return prevRecipes;
-          }
-        }
-        
-        // Il y a des changements, mettre à jour
-        return fullRecipes;
-      });
-    } catch (err: any) {
-      console.error('❌ [Recipes] Erreur:', err);
-      if (!silent) {
-        setError(err.message || 'Une erreur est survenue');
-      }
-    } finally {
-      if (!silent) {
-        setIsLoading(false);
-      }
-    }
-  }, []);
+  const recipes = useRecipeStore((state) => state.recipes);
+  const recipesLoading = useRecipeStore((state) => state.recipesLoading);
+  const recipesError = useRecipeStore((state) => state.recipesError);
+  const hasFetchedRecipes = useRecipeStore((state) => state.hasFetchedRecipes);
+  const storeRefresh = useRecipeStore((state) => state.refreshRecipes);
+  const setRecipesLoading = useRecipeStore((state) => state.setRecipesLoading);
+  const markRecipesFetched = useRecipeStore((state) => state.markRecipesFetched);
+  const { isOffline } = useNetworkContext();
+  const wasOfflineRef = useRef(isOffline);
 
   useEffect(() => {
-    fetchRecipes(false); // Chargement initial avec loading
-  }, [fetchRecipes]);
+    if (isOffline) {
+      if (!wasOfflineRef.current) {
+        console.log('🌐 Offline mode — using cached recipes');
+      }
+      wasOfflineRef.current = true;
+
+      if (recipesLoading) {
+        setRecipesLoading(false);
+      }
+
+      if (!hasFetchedRecipes) {
+        markRecipesFetched();
+      }
+
+      return;
+    }
+
+    const sync = async () => {
+      if (wasOfflineRef.current) {
+        console.log('✅ Back online, syncing recipes...');
+      }
+
+      try {
+        await storeRefresh({ silent: wasOfflineRef.current || hasFetchedRecipes });
+      } catch (err) {
+        console.error('❌ [Recipes] Erreur lors de la synchronisation:', err);
+      } finally {
+        wasOfflineRef.current = false;
+      }
+    };
+
+    void sync();
+  }, [isOffline, hasFetchedRecipes, storeRefresh, recipesLoading, setRecipesLoading, markRecipesFetched]);
 
   const refresh = useCallback(() => {
-    return fetchRecipes(true); // Refresh silencieux sans loading
-  }, [fetchRecipes]);
+    if (isOffline) {
+      console.log('🌐 Offline mode — using cached recipes');
+      return Promise.resolve();
+    }
+
+    return storeRefresh({ silent: false }).catch((err) => {
+      console.error('❌ [Recipes] Erreur lors du refresh:', err);
+      throw err;
+    });
+  }, [storeRefresh, isOffline]);
 
   return {
     recipes,
-    isLoading,
-    error,
+    isLoading: recipesLoading,
+    error: recipesError,
     refresh,
   };
 }

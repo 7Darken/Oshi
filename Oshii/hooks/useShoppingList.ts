@@ -7,6 +7,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import { supabase } from '@/services/supabase';
 import * as Haptics from 'expo-haptics';
+import { useNetworkContext } from '@/contexts/NetworkContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export interface ShoppingListItem {
   id: string;
@@ -45,10 +47,18 @@ export function useShoppingList(): UseShoppingListReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const hasAttemptedInitialFetch = useRef(false);
+  const { isOffline } = useNetworkContext();
+  const { user, session } = useAuthContext();
 
   const ensureUserId = useCallback(async () => {
     if (userIdRef.current) {
       return userIdRef.current;
+    }
+
+    if (user?.id) {
+      userIdRef.current = user.id;
+      return user.id;
     }
 
     const { data, error: userError } = await supabase.auth.getUser();
@@ -60,9 +70,17 @@ export function useShoppingList(): UseShoppingListReturn {
 
     userIdRef.current = data.user.id;
     return data.user.id;
-  }, []);
+  }, [user?.id]);
 
   const fetchShoppingList = useCallback(async (options: FetchOptions = {}) => {
+    if (isOffline) {
+      if (!options.silent) {
+        setIsLoading(false);
+      }
+      setError(null);
+      return;
+    }
+
     console.log('🛒 [ShoppingList] Récupération de la liste de courses...');
     if (!options.silent) {
       setIsLoading(true);
@@ -91,7 +109,7 @@ export function useShoppingList(): UseShoppingListReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [ensureUserId]);
+  }, [ensureUserId, isOffline]);
 
   const toggleItem = useCallback(async (itemId: string) => {
     const item = items.find((i) => i.id === itemId);
@@ -255,8 +273,17 @@ export function useShoppingList(): UseShoppingListReturn {
   }, [ensureUserId, fetchShoppingList]);
 
   useEffect(() => {
-    fetchShoppingList();
+    if (!hasAttemptedInitialFetch.current) {
+      fetchShoppingList();
+      hasAttemptedInitialFetch.current = true;
+    }
   }, [fetchShoppingList]);
+
+  useEffect(() => {
+    if (!isOffline && session && user?.id) {
+      void fetchShoppingList({ silent: true });
+    }
+  }, [isOffline, fetchShoppingList, session, user?.id]);
 
   return {
     items,

@@ -3,7 +3,7 @@
  * Utilise le store Zustand pour gérer l'état utilisateur
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   signUp,
   signIn,
@@ -19,6 +19,7 @@ import {
 } from '@/services/supabase';
 import { signInWithGoogle as signInWithGoogleService } from '@/services/googleAuth';
 import { signInWithApple as signInWithAppleService } from '@/services/appleAuth';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 
 export interface AuthState {
   user: any | null;
@@ -47,14 +48,20 @@ export function useAuth() {
   const [session, setSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isOffline } = useNetworkContext();
+  const isOfflineRef = useRef(isOffline);
+
+  useEffect(() => {
+    isOfflineRef.current = isOffline;
+  }, [isOffline]);
 
   const checkSession = useCallback(async () => {
     try {
       console.log('🔍 [Auth] Vérification de la session depuis SecureStore...');
-      
+
       // Récupérer la session depuis Supabase (qui utilise SecureStore via notre custom storage)
       const currentSession = await getCurrentSession();
-      
+
       if (currentSession) {
         console.log('✅ [Auth] Session trouvée dans SecureStore:', {
           userId: currentSession.user?.id,
@@ -62,10 +69,10 @@ export function useAuth() {
           expiresAt: currentSession.expires_at,
           hasAccessToken: !!currentSession.access_token,
         });
-        
+
         // Vérifier si la session est toujours valide
         const now = Math.floor(Date.now() / 1000);
-        if (currentSession.expires_at && currentSession.expires_at < now) {
+        if (!isOfflineRef.current && currentSession.expires_at && currentSession.expires_at < now) {
           console.warn('⚠️ [Auth] Session expirée, tentative de rafraîchissement...');
           // Essayer de rafraîchir la session
           try {
@@ -89,14 +96,27 @@ export function useAuth() {
             return;
           }
         }
-        
-        // Session valide, récupérer l'utilisateur
-        const currentUser = await getCurrentUser();
-        
-        setSession(currentSession);
-        setUser(currentUser);
-        setIsAuthenticated(!!currentUser);
-        
+
+        if (!isOfflineRef.current) {
+          try {
+            // Session valide, récupérer l'utilisateur
+            const currentUser = await getCurrentUser();
+            setSession(currentSession);
+            setUser(currentUser);
+            setIsAuthenticated(!!currentUser);
+          } catch (userError) {
+            console.error('⚠️ [Auth] Impossible de récupérer l\'utilisateur, conservation de la session existante:', userError);
+            setSession(currentSession);
+            setUser(currentSession.user || null);
+            setIsAuthenticated(!!currentSession.user);
+          }
+        } else {
+          console.log('ℹ️ [Auth] Mode hors ligne: utilisation des informations de session locales');
+          setSession(currentSession);
+          setUser(currentSession.user || null);
+          setIsAuthenticated(!!currentSession.user);
+        }
+
         console.log('✅ [Auth] Session restaurée avec succès');
       } else {
         console.log('ℹ️ [Auth] Aucune session trouvée dans SecureStore');
@@ -106,12 +126,7 @@ export function useAuth() {
       }
     } catch (error) {
       console.error('❌ [Auth] Erreur lors de la vérification de la session:', error);
-      setSession(null);
-      setUser(null);
-      setIsAuthenticated(false);
-    } finally {
-      // Ne pas arrêter le loading ici car onAuthStateChange le fera
-      // setIsLoading(false);
+      // Ne pas effacer la session existante sur erreur réseau, laisser onAuthStateChange décider
     }
   }, []);
 

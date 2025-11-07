@@ -3,8 +3,9 @@
  * Utilise le store Zustand pour éviter les rechargements
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFoodItemsStore } from '@/stores/useFoodItemsStore';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 
 /**
  * Hook pour utiliser le cache des food_items
@@ -18,13 +19,27 @@ export function useFoodItems() {
     isInitialized,
     loadFoodItems 
   } = useFoodItemsStore();
+  const { isOffline } = useNetworkContext();
+  const wasOfflineRef = useRef(isOffline);
 
   useEffect(() => {
     // Charger si pas encore initialisé
+    if (isOffline) {
+      return;
+    }
+
     if (!isInitialized && !isLoading) {
       loadFoodItems();
     }
-  }, [isInitialized, isLoading, loadFoodItems]);
+  }, [isInitialized, isLoading, loadFoodItems, isOffline]);
+
+  useEffect(() => {
+    if (wasOfflineRef.current && !isOffline && !isInitialized) {
+      loadFoodItems();
+    }
+
+    wasOfflineRef.current = isOffline;
+  }, [isOffline, isInitialized, loadFoodItems]);
 
   return {
     foodItems,

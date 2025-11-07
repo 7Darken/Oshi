@@ -67,7 +67,7 @@ export const useFoodItemsStore = create<FoodItemsStore>((set, get) => ({
       set({
         error: err.message || 'Une erreur est survenue',
         isLoading: false,
-        isInitialized: true, // Marquer comme initialisé même en cas d'erreur pour éviter les rechargements
+        isInitialized: false,
       });
     }
   },

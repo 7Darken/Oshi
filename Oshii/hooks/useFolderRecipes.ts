@@ -2,9 +2,11 @@
  * Hook pour gérer les recettes d'un dossier spécifique
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/supabase';
-import { FullRecipe } from './useRecipes';
+import { FullRecipe } from '@/types/recipe';
+import { useRecipeStore } from '@/stores/useRecipeStore';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 
 export interface UseFolderRecipesReturn {
   recipes: FullRecipe[];
@@ -22,10 +24,56 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
   const [recipes, setRecipes] = useState<FullRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const allRecipes = useRecipeStore((state) => state.recipes);
+  const recipesLastUpdatedAt = useRecipeStore((state) => state.recipesLastUpdatedAt);
+  const { isOffline } = useNetworkContext();
+  const hasAttemptedInitialFetch = useRef(false);
+  const lastFetchTimestamp = useRef<number>(0);
 
-  const fetchFolderRecipes = useCallback(async (silent: boolean = false) => {
+  const fetchFolderRecipes = useCallback(async (silent: boolean = false, forceRefresh: boolean = false) => {
+    // Optimisation: Utiliser le cache si disponible et récent (< 2 secondes)
+    const now = Date.now();
+    const cacheAge = now - lastFetchTimestamp.current;
+    const hasCachedRecipes = allRecipes.length > 0;
+
+    if (!forceRefresh && hasCachedRecipes && cacheAge < 2000 && !isOffline) {
+      if (!silent) {
+        console.log('⚡ [FolderRecipes] Utilisation du cache récent (age:', cacheAge, 'ms)');
+      }
+
+      const filtered = allRecipes.filter((recipe) => {
+        if (folderId === null) {
+          return recipe.folder_id === null;
+        }
+        return recipe.folder_id === folderId;
+      });
+
+      setRecipes(filtered);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (isOffline) {
+      if (!silent) {
+        console.log('📖 [FolderRecipes] Mode hors ligne — utilisation du cache local');
+        setIsLoading(false);
+        setError(null);
+      }
+
+      const filtered = allRecipes.filter((recipe) => {
+        if (folderId === null) {
+          return recipe.folder_id === null;
+        }
+        return recipe.folder_id === folderId;
+      });
+
+      setRecipes(filtered);
+      return;
+    }
+
     if (!silent) {
-      console.log('📖 [FolderRecipes] Récupération des recettes, folderId:', folderId);
+      console.log('🌐 [FolderRecipes] Récupération depuis Supabase, folderId:', folderId);
       setIsLoading(true);
       setError(null);
     }
@@ -108,27 +156,30 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
         console.log('✅ [FolderRecipes] Recettes complètes récupérées avec succès');
       }
 
+      // Mettre à jour le timestamp du dernier fetch
+      lastFetchTimestamp.current = Date.now();
+
       // Vérifier si les données ont vraiment changé avant de mettre à jour l'état
       setRecipes(prevRecipes => {
         const prevIds = new Set(prevRecipes.map(r => r.id));
         const newIds = new Set(fullRecipes.map(r => r.id));
-        
+
         // Vérifier si les IDs sont identiques
         if (prevIds.size === newIds.size && [...prevIds].every(id => newIds.has(id))) {
           // Vérifier si les données des recettes ont changé (folder_id, etc.)
           const hasChanges = fullRecipes.some(newRecipe => {
             const prevRecipe = prevRecipes.find(r => r.id === newRecipe.id);
-            return !prevRecipe || 
+            return !prevRecipe ||
                    prevRecipe.folder_id !== newRecipe.folder_id ||
                    prevRecipe.title !== newRecipe.title;
           });
-          
+
           if (!hasChanges) {
             // Aucun changement, retourner les références précédentes
             return prevRecipes;
           }
         }
-        
+
         // Il y a des changements, mettre à jour
         return fullRecipes;
       });
@@ -142,14 +193,26 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
         setIsLoading(false);
       }
     }
-  }, [folderId]);
+  }, [folderId, isOffline, allRecipes]);
 
+  // Chargement initial au montage du composant
   useEffect(() => {
-    fetchFolderRecipes(false); // Chargement initial avec loading
+    if (!hasAttemptedInitialFetch.current) {
+      void fetchFolderRecipes(false, false); // Chargement initial sans forceRefresh
+      hasAttemptedInitialFetch.current = true;
+    }
   }, [fetchFolderRecipes]);
 
+  // Rafraîchir automatiquement quand les recettes globales changent (nouvelle recette ajoutée, etc.)
+  useEffect(() => {
+    if (hasAttemptedInitialFetch.current && recipesLastUpdatedAt) {
+      console.log('🔄 [FolderRecipes] Détection de changement dans les recettes globales');
+      void fetchFolderRecipes(true, true); // Refresh silencieux avec forceRefresh
+    }
+  }, [recipesLastUpdatedAt, fetchFolderRecipes]);
+
   const refresh = useCallback(() => {
-    return fetchFolderRecipes(true); // Refresh silencieux sans loading
+    return fetchFolderRecipes(true, true); // Refresh silencieux avec forceRefresh
   }, [fetchFolderRecipes]);
 
   return {

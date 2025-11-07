@@ -9,8 +9,10 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { NetworkProvider } from '@/contexts/NetworkContext';
 import { useDeepLinking } from '@/hooks/useDeepLinking';
 import { CustomAlert } from '@/components/ui/CustomAlert';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 function RootNavigator() {
   const colorScheme = useColorScheme();
@@ -20,6 +22,7 @@ function RootNavigator() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <OfflineBanner />
       <Stack>
           <Stack.Screen 
             name="welcome" 
@@ -158,9 +161,11 @@ export default function RootLayout() {
   return (
     <View style={styles.root} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
+        <NetworkProvider>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+        </NetworkProvider>
       </SafeAreaProvider>
     </View>
   );

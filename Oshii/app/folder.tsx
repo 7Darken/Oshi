@@ -2,26 +2,25 @@
  * Écran de détails du dossier - Affiche les recettes d'un dossier
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Dimensions,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, Users, Plus } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { SelectRecipesSheet } from '@/components/SelectRecipesSheet';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFolderRecipes } from '@/hooks/useFolderRecipes';
-import { SelectRecipesSheet } from '@/components/SelectRecipesSheet';
 import { supabase } from '@/services/supabase';
+import { Image as ExpoImage } from 'expo-image';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Clock, Plus, Users } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_MARGIN = Spacing.md;
@@ -180,11 +179,11 @@ export default function FolderScreen() {
                       source={
                         recipe.image_url
                           ? { uri: recipe.image_url }
-                          : require('@/assets/images/icon.png')
+                          : require('@/assets/images/default_recipe.png')
                       }
                       style={styles.recipeImage}
                       contentFit="cover"
-                      placeholder={require('@/assets/images/icon.png')}
+                      placeholder={require('@/assets/images/default_recipe.png')}
                       transition={200}
                     />
                   </View>

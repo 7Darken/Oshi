@@ -14,27 +14,32 @@ import { MacroCircle } from '@/components/ui/MacroCircle';
 import { StepRow } from '@/components/ui/StepRow';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
-import { FullRecipe } from '@/hooks/useRecipes';
 import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
+import { FullRecipe } from '@/types/recipe';
+import { convertIngredient } from '@/utils/ingredientConverter';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { ArrowLeft, Bookmark, Clock, Flame, Folder, Minus, Play, Plus, Share2, ShoppingCart, Users } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, Clock, Flame, Folder, Minus, Play, Plus, Scale, Share2, ShoppingCart, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Linking,
+  Platform,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
-  Animated,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
 
 const HERO_IMAGE_HEIGHT = 400;
@@ -44,8 +49,10 @@ export default function ResultScreen() {
   const params = useLocalSearchParams<{ recipeId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { currentRecipe } = useRecipeStore();
+  const { currentRecipe, addRecipe } = useRecipeStore();
+  const recipesCache = useRecipeStore((state) => state.recipes);
   const { user, isPremium } = useAuthContext();
+  const { isOffline } = useNetworkContext();
   const { getFoodItemImage } = useFoodItems();
   const previewRef = useRef<View | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
@@ -62,6 +69,7 @@ export default function ResultScreen() {
   const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [useSpoonConversion, setUseSpoonConversion] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -85,20 +93,93 @@ export default function ResultScreen() {
     [scrollY]
   );
 
-  // Charger la recette depuis Supabase si recipeId est fourni
+  const cachedRecipe = useMemo<FullRecipe | null>(() => {
+    if (!params.recipeId) {
+      return null;
+    }
+
+    return recipesCache.find((recipe) => recipe.id === params.recipeId) ?? null;
+  }, [params.recipeId, recipesCache]);
+
   useEffect(() => {
+    if (!params.recipeId || !isOffline) {
+      return;
+    }
+
+    if (cachedRecipe) {
+      console.log('📖 [Result] Mode hors ligne — utilisation du cache local');
+      setDbRecipe(cachedRecipe);
+      setCurrentFolder((prev) => {
+        if (!cachedRecipe.folder_id) {
+          return null;
+        }
+
+        if (prev?.id === cachedRecipe.folder_id) {
+          return prev;
+        }
+
+        return prev ?? null;
+      });
+      setError(null);
+    } else {
+      console.warn('⚠️ [Result] Recette introuvable dans le cache hors ligne');
+      setDbRecipe(null);
+      setCurrentFolder(null);
+      setError('Recette indisponible hors ligne.');
+    }
+
+    setIsLoading(false);
+  }, [isOffline, params.recipeId, cachedRecipe]);
+
+  // Charger la recette depuis le cache ou Supabase si recipeId est fourni
+  useEffect(() => {
+    if (!params.recipeId) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
     const loadRecipe = async () => {
-      if (!params.recipeId) {
-        // Pas de recipeId, utiliser currentRecipe du store
+      // Optimisation: Vérifier le cache en premier (chargement instantané)
+      if (cachedRecipe) {
+        console.log('⚡ [Result] Recette trouvée dans le cache - chargement instantané');
+        setDbRecipe(cachedRecipe);
+
+        // Charger le dossier si nécessaire
+        if (cachedRecipe.folder_id && !isOffline) {
+          const { data: folderData } = await supabase
+            .from('folders')
+            .select('id, name')
+            .eq('id', cachedRecipe.folder_id)
+            .single();
+
+          if (!cancelled && folderData) {
+            setCurrentFolder({ id: folderData.id, name: folderData.name });
+          }
+        } else {
+          setCurrentFolder(null);
+        }
+
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+
+      // Si pas dans le cache et offline, erreur
+      if (isOffline) {
+        console.warn('⚠️ [Result] Recette non disponible hors ligne');
+        setError('Recette indisponible hors ligne.');
         setIsLoading(false);
         return;
       }
 
+      // Sinon, charger depuis Supabase (réseau)
+      console.log('🌐 [Result] Chargement depuis Supabase...');
       setIsLoading(true);
       setError(null);
 
       try {
-        // 1. Récupérer la recette
         const { data: recipe, error: recipeError } = await supabase
           .from('recipes')
           .select('*')
@@ -110,14 +191,12 @@ export default function ResultScreen() {
           throw new Error(`Recette introuvable: ${recipeError.message}`);
         }
 
-        // 2. Récupérer les ingrédients
         const { data: ingredients } = await supabase
           .from('ingredients')
           .select('*')
           .eq('recipe_id', params.recipeId)
           .order('name');
 
-        // 3. Récupérer les étapes
         const { data: steps } = await supabase
           .from('steps')
           .select('*')
@@ -126,13 +205,21 @@ export default function ResultScreen() {
 
         const fullRecipe: FullRecipe = {
           ...recipe,
-          ingredients: ingredients || [],
-          steps: steps || [],
+          ingredients: (ingredients || []).map((ingredient) => ({
+            ...ingredient,
+            quantity: ingredient.quantity ?? null,
+            unit: ingredient.unit ?? null,
+            food_item_id: ingredient.food_item_id ?? null,
+          })),
+          steps: (steps || []).map((step) => ({
+            ...step,
+            duration: step.duration ?? null,
+            temperature: step.temperature ?? null,
+          })),
         };
 
-        console.log('✅ [Result] Recette chargée avec succès');
+        console.log('✅ [Result] Recette chargée avec succès depuis Supabase');
 
-        // Charger le dossier associé si folder_id existe
         if (recipe.folder_id) {
           const { data: folderData } = await supabase
             .from('folders')
@@ -140,26 +227,46 @@ export default function ResultScreen() {
             .eq('id', recipe.folder_id)
             .single();
 
-          if (folderData) {
-            setCurrentFolder({ id: folderData.id, name: folderData.name });
+          if (!cancelled) {
+            if (folderData) {
+              setCurrentFolder({ id: folderData.id, name: folderData.name });
+            } else {
+              setCurrentFolder(null);
+            }
           }
-        } else {
+        } else if (!cancelled) {
           setCurrentFolder(null);
         }
 
-        // Les food_items sont maintenant chargés dans le cache global
+        const didInsert = addRecipe(fullRecipe);
 
-        setDbRecipe(fullRecipe);
+        if (!cancelled) {
+          if (didInsert && Platform.OS === 'ios') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {
+              /* noop */
+            });
+          }
+
+          setDbRecipe(fullRecipe);
+        }
       } catch (err: any) {
-        console.error('❌ [Result] Erreur:', err);
-        setError(err.message || 'Une erreur est survenue');
+        if (!cancelled) {
+          console.error('❌ [Result] Erreur:', err);
+          setError(err.message || 'Une erreur est survenue');
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadRecipe();
-  }, [params.recipeId]);
+    void loadRecipe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.recipeId, isOffline, addRecipe, cachedRecipe]);
 
   // Déterminer quelle recette afficher
   const recipe = params.recipeId ? dbRecipe : currentRecipe;
@@ -183,13 +290,13 @@ export default function ResultScreen() {
 
     return recipe.ingredients.map((ingredient) => {
       if (!ingredient.quantity || ingredient.quantity.trim() === '') {
-        return { ...ingredient };
+        return { ...ingredient, isConverted: false };
       }
 
       // Parser la quantité
       const numMatch = ingredient.quantity.match(/^(\d+(?:[.,]\d+)?)/);
       if (!numMatch) {
-        return { ...ingredient };
+        return { ...ingredient, isConverted: false };
       }
 
       const originalValue = parseFloat(numMatch[1].replace(',', '.'));
@@ -201,12 +308,33 @@ export default function ResultScreen() {
         formattedValue = adjustedValue.toFixed(2).replace(/\.?0+$/, '');
       }
 
+      const adjustedQuantity = ingredient.quantity.replace(/^(\d+(?:[.,]\d+)?)/, formattedValue);
+
+      // Si conversion en cuillères activée, tenter la conversion
+      if (useSpoonConversion) {
+        const conversionResult = convertIngredient(
+          ingredient.name,
+          adjustedQuantity,
+          ingredient.unit
+        );
+
+        if (conversionResult.isConverted) {
+          return {
+            ...ingredient,
+            quantity: conversionResult.value.toString(),
+            unit: conversionResult.unit,
+            isConverted: true,
+          };
+        }
+      }
+
       return {
         ...ingredient,
-        quantity: ingredient.quantity.replace(/^(\d+(?:[.,]\d+)?)/, formattedValue),
+        quantity: adjustedQuantity,
+        isConverted: false,
       };
     });
-  }, [recipe?.ingredients, recipe?.servings, currentPortions]);
+  }, [recipe?.ingredients, recipe?.servings, currentPortions, useSpoonConversion]);
 
   // Calculer les macros ajustées selon les portions (memoized pour performance)
   const adjustedMacros = useMemo(() => {
@@ -538,11 +666,11 @@ export default function ResultScreen() {
           source={
             'image_url' in recipe && recipe.image_url
               ? { uri: recipe.image_url }
-              : require('@/assets/images/icon.png')
+              : require('@/assets/images/default_recipe.png')
           }
           style={styles.recipeImage}
           contentFit="cover"
-          placeholder={require('@/assets/images/icon.png')}
+          placeholder={require('@/assets/images/default_recipe.png')}
           transition={200}
         />
       </Animated.View>
@@ -711,7 +839,16 @@ export default function ResultScreen() {
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Ingrédients
               </Text>
-              {recipe && recipe.servings && (
+            </View>
+ {/* Portion selector */}
+ {recipe && recipe.servings && (
+              <View style={styles.portionSelectorRow}>
+                <View style={styles.portionLabelContainer}>
+                  <Users size={18} color={colors.primary} strokeWidth={2} />
+                  <Text style={[styles.portionLabel, { color: colors.text }]}>
+                    Portions
+                  </Text>
+                </View>
                 <View style={[styles.portionSelectorCompact, { borderColor: colors.border }]}>
                   <TouchableOpacity
                     onPress={handleDecreasePortions}
@@ -739,8 +876,25 @@ export default function ResultScreen() {
                     <Plus size={16} color={colors.text} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
-              )}
+              </View>
+            )}
+            {/* Toggle "Pas de balance" avec Switch natif */}
+            <View style={styles.conversionToggleContainer}>
+              <View style={styles.conversionToggleLabelContainer}>
+                <Scale size={18} color="#EF4444" strokeWidth={2} />
+                <Text style={[styles.conversionToggleLabel, { color: colors.text }]}>
+                  Pas de balance
+                </Text>
+              </View>
+              <Switch
+                value={useSpoonConversion}
+                onValueChange={setUseSpoonConversion}
+                trackColor={{ false: '#767577', true: colors.primary }}
+                thumbColor='#FFFFFF'
+              />
             </View>
+
+           
             {adjustedIngredients && adjustedIngredients.length > 0 ? (
               <View style={styles.ingredientsGridContainer}>
                 {/* Affichage initial: 6 ingrédients max */}
@@ -759,6 +913,7 @@ export default function ResultScreen() {
                             key={item.id || index}
                             ingredient={adaptedIngredient}
                             imageUrl={foodItemImage}
+                            isConverted={(item as any).isConverted || false}
                           />
                         );
                       })}
@@ -791,6 +946,7 @@ export default function ResultScreen() {
                           key={item.id || index}
                           ingredient={adaptedIngredient}
                           imageUrl={foodItemImage}
+                          isConverted={(item as any).isConverted || false}
                         />
                       );
                     })}
@@ -868,6 +1024,9 @@ export default function ResultScreen() {
             {recipe.steps && recipe.steps.length > 0 && (
               <TouchableOpacity
                 onPress={() => {
+                  // Retour haptique sur iOS
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
                   const recipeId = params.recipeId || (currentRecipe?.id as string);
                   if (recipeId) {
                     router.push(`/steps?recipeId=${recipeId}` as any);
@@ -1385,5 +1544,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
     padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
+  },
+  conversionToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  conversionToggleLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  conversionToggleLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  portionSelectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  portionLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  portionLabel: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

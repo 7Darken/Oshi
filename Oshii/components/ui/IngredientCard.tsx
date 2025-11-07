@@ -12,11 +12,13 @@ import { Ingredient } from '@/types/recipe';
 interface IngredientCardProps {
   ingredient: Ingredient;
   imageUrl?: string | null;
+  isConverted?: boolean;
 }
 
 export function IngredientCard({
   ingredient,
   imageUrl,
+  isConverted = false,
 }: IngredientCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -98,8 +100,15 @@ export function IngredientCard({
           {capitalizeName(ingredient.name)}
         </Text>
         {displayQuantity() && (
-          <Text style={[styles.quantity, { color: colors.text, fontSize: quantityFontSize }]}>
-            {displayQuantity()}
+          <Text style={[styles.quantity, { fontSize: quantityFontSize }]}>
+            <Text style={{ color: isConverted ? colors.primary : colors.text }}>
+              {ingredient.quantity}
+            </Text>
+            {ingredient.unit && (
+              <Text style={{ color: colors.text }}>
+                {' '}{ingredient.unit}
+              </Text>
+            )}
           </Text>
         )}
       </View>

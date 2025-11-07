@@ -2,27 +2,28 @@
  * Page Sheet des paramètres de l'application
  */
 
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  Alert,
-} from 'react-native';
-import Purchases from 'react-native-purchases';
-import { X, HelpCircle, Info, LogOut, Trash2, Mail, Moon, Star, ChevronRight } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Card } from '@/components/ui/Card';
 import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
 import { TutorialSheet } from '@/components/TutorialSheet';
+import { Card } from '@/components/ui/Card';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { initRevenueCat } from '@/services/revenueCat';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
+import { ChevronRight, HelpCircle, Info, LogOut, Mail, Moon, Star, Trash2, X } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Purchases from 'react-native-purchases';
 
 interface SettingsSheetProps {
   visible: boolean;
@@ -39,6 +40,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
 
   const appName = Constants?.expoConfig?.name ?? 'Oshii';
   const appVersion = Constants?.expoConfig?.version ?? '1.0.0';
@@ -63,6 +65,36 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
         err.message || 'Une erreur est survenue lors de la suppression du compte. Veuillez réessayer.'
       );
       setIsDeleting(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (isManagingSubscription) {
+      return;
+    }
+
+    setIsManagingSubscription(true);
+
+    try {
+      const initialized = await initRevenueCat(user?.id ?? undefined);
+
+      if (!initialized) {
+        Alert.alert(
+          'Service indisponible',
+          'La gestion de l’abonnement n’est pas disponible pour le moment. Veuillez réessayer plus tard.'
+        );
+        return;
+      }
+
+      await Purchases.showManageSubscriptions();
+    } catch (error) {
+      console.error('❌ [SettingsSheet] Erreur ouverture gestion abonnement:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d’ouvrir la gestion d’abonnement. Veuillez réessayer plus tard.'
+      );
+    } finally {
+      setIsManagingSubscription(false);
     }
   };
 
@@ -152,17 +184,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
           {/* Container Abonnement Premium - Visible uniquement si premium */}
           {isPremium && (
             <TouchableOpacity
-              onPress={async () => {
-                try {
-                  await Purchases.showManageSubscriptions();
-                } catch (error) {
-                  console.error('❌ [SettingsSheet] Erreur ouverture gestion abonnement:', error);
-                  Alert.alert(
-                    'Erreur',
-                    'Impossible d&apos;ouvrir la gestion d&apos;abonnement. Veuillez réessayer.'
-                  );
-                }
-              }}
+              onPress={handleManageSubscription}
               activeOpacity={0.7}
             >
               <Card style={styles.optionCard}>
@@ -232,7 +254,22 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[styles.logoutButton, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
-              onPress={onLogout}
+              onPress={() => {
+                Alert.alert(
+                  'Se déconnecter',
+                  'Es-tu sûr de vouloir te déconnecter ? Tu devras te reconnecter pour accéder à tes recettes.',
+                  [
+                    { text: 'Annuler', style: 'cancel' },
+                    {
+                      text: 'Oui, se déconnecter',
+                      style: 'destructive',
+                      onPress: () => {
+                        onLogout();
+                      },
+                    },
+                  ],
+                );
+              }}
               activeOpacity={0.7}
             >
               <LogOut size={20} color="#FF6B6B" />

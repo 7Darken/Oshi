@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ShoppingCart, Sparkles } from 'lucide-react-native';
@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { useFoodItemsStore } from '@/stores/useFoodItemsStore';
+import { useNetworkContext } from '@/contexts/NetworkContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -20,11 +21,25 @@ export default function TabLayout() {
   const hasRecipes = recipes.length > 0;
   const { openAnalyzeSheet, showAnalyzeSheet, closeAnalyzeSheet, clearRecipe } = useRecipeStore();
   const { loadFoodItems } = useFoodItemsStore();
+  const { isOffline } = useNetworkContext();
+  const hasAttemptedFoodItems = useRef(false);
 
   // Charger les food_items au démarrage des tabs
   useEffect(() => {
+    if (isOffline || hasAttemptedFoodItems.current) {
+      return;
+    }
+
+    hasAttemptedFoodItems.current = true;
     loadFoodItems();
-  }, [loadFoodItems]);
+  }, [loadFoodItems, isOffline]);
+
+  useEffect(() => {
+    if (!isOffline && !hasAttemptedFoodItems.current) {
+      hasAttemptedFoodItems.current = true;
+      loadFoodItems();
+    }
+  }, [isOffline, loadFoodItems]);
 
   // Handler pour ouvrir l'AnalyzeSheet avec retour haptique
   const handleOpenAnalyzeSheet = useCallback(() => {

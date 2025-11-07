@@ -9,6 +9,8 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, Clock, Users, FileText } from 'lucide-react-native';
@@ -246,64 +248,70 @@ export default function SearchScreen() {
   // Mémoriser la liste des recettes pour éviter les recalculs
   const memoizedRecipes = useMemo(() => recipes, [recipes]);
 
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
+    <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}> 
           Rechercher
         </Text>
         <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
           Trouvez une recette par ingrédient
         </Text>
-      </View>
+        </View>
 
-      {/* Search Bar with Tags */}
-      <View style={styles.searchContainer}>
-        <SearchBarWithTags
-          selectedFoodItems={selectedFoodItems}
-          onFoodItemsChange={setSelectedFoodItems}
-          placeholder="Rechercher un ingrédient..."
-        />
-      </View>
+        {/* Search Bar with Tags */}
+        <View style={styles.searchContainer}>
+          <SearchBarWithTags
+            selectedFoodItems={selectedFoodItems}
+            onFoodItemsChange={setSelectedFoodItems}
+            placeholder="Rechercher un ingrédient..."
+          />
+        </View>
 
-      {/* Results */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.icon }]}>
-            Recherche en cours...
-          </Text>
-        </View>
-      ) : memoizedRecipes.length > 0 ? (
-        <FlatList
-          data={memoizedRecipes}
-          renderItem={renderRecipeCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
-          windowSize={10}
-          initialNumToRender={10}
-        />
-      ) : selectedFoodItems.length > 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.icon }]}>
-            Aucune recette trouvée avec ces ingrédients
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Search size={48} color={colors.icon} />
-          <Text style={[styles.emptyText, { color: colors.icon }]}>
-            Recherchez une recette par ingrédient
-          </Text>
-        </View>
-      )}
-    </View>
+        {/* Results */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.icon }]}>
+              Recherche en cours...
+            </Text>
+          </View>
+        ) : memoizedRecipes.length > 0 ? (
+          <FlatList
+            data={memoizedRecipes}
+            renderItem={renderRecipeCard}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            windowSize={10}
+            initialNumToRender={10}
+          />
+        ) : selectedFoodItems.length > 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.icon }]}>
+              Aucune recette trouvée avec ces ingrédients
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Search size={48} color={colors.icon} />
+            <Text style={[styles.emptyText, { color: colors.icon }]}> 
+              Recherchez une recette par ingrédient
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

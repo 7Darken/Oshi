@@ -8,7 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { FullRecipe } from '@/hooks/useRecipes';
+import { FullRecipe } from '@/types/recipe';
 import { OshiiLogo } from '@/components/ui/OshiiLogo';
 
 export type PreviewIngredient = {
