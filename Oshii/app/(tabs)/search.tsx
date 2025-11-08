@@ -2,27 +2,41 @@
  * Onglet Recherche - Rechercher des recettes par ingrédient
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { RecipeFilterSheet } from '@/components/RecipeFilterSheet';
+import { SearchBarWithTags } from '@/components/SearchBarWithTags';
+import { Card } from '@/components/ui/Card';
+import type { DietType, MealType } from '@/constants/recipeCategories';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useFoodItems } from '@/hooks/useFoodItems';
+import { useSharedRecipeIds } from '@/hooks/useSharedRecipeIds';
+import { supabase } from '@/services/supabase';
+import { FoodItem } from '@/stores/useFoodItemsStore';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Clock, FileText, Search, SlidersHorizontal, Users } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   FlatList,
+  Keyboard,
+  StyleSheet,
+  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Search, Clock, Users, FileText } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Card } from '@/components/ui/Card';
-import { SearchBarWithTags } from '@/components/SearchBarWithTags';
-import { supabase } from '@/services/supabase';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { useFoodItems } from '@/hooks/useFoodItems';
-import { FoodItem } from '@/stores/useFoodItemsStore';
+
+const formatLabel = (value: string) =>
+  value
+    .split(' ')
+    .map((segment) =>
+      segment
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-'),
+    )
+    .join(' ');
 
 interface SearchRecipe {
   id: string;
@@ -30,6 +44,8 @@ interface SearchRecipe {
   image_url: string | null;
   total_time: string | null;
   servings: number | null;
+  meal_type: MealType | null;
+  diet_type: DietType[] | null;
 }
 
 // Composant de carte de recette mémorisé pour éviter les re-renders inutiles
@@ -98,18 +114,34 @@ const RecipeCard = React.memo(({
   );
 });
 
+RecipeCard.displayName = 'RecipeCard';
+
 export default function SearchScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { user } = useAuthContext();
   const { isInitialized: foodItemsReady } = useFoodItems();
+  const { sharedRecipeIds } = useSharedRecipeIds();
 
   const [selectedFoodItems, setSelectedFoodItems] = useState<FoodItem[]>([]);
   const [recipes, setRecipes] = useState<SearchRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFilterSheetVisible, setIsFilterSheetVisible] = useState(false);
+  const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>([]);
+  const [selectedDietTypes, setSelectedDietTypes] = useState<DietType[]>([]);
+  const [recentRecipes, setRecentRecipes] = useState<SearchRecipe[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const previousRecipeIdsRef = useRef<Set<string>>(new Set());
   const previousRecipesRef = useRef<SearchRecipe[]>([]);
+  const previousFilterSignatureRef = useRef<string>('');
+  const recentFetchInProgressRef = useRef(false);
+  const recentRecipesRequestedRef = useRef(false);
+
+  const hasActiveFilters = useMemo(
+    () => selectedMealTypes.length > 0 || selectedDietTypes.length > 0,
+    [selectedDietTypes.length, selectedMealTypes.length],
+  );
 
   // Rechercher des recettes basées sur les food_items sélectionnés
   useEffect(() => {
@@ -121,6 +153,7 @@ export default function SearchScreen() {
         setRecipes([]);
         previousRecipeIdsRef.current = new Set();
         previousRecipesRef.current = [];
+        previousFilterSignatureRef.current = '';
         return;
       }
 
@@ -156,6 +189,10 @@ export default function SearchScreen() {
 
         const recipeIds = Array.from(intersection);
         const newRecipeIdsSet = new Set(recipeIds);
+        const filterSignature = JSON.stringify({
+          meal: [...selectedMealTypes].sort(),
+          diet: [...selectedDietTypes].sort(),
+        });
 
         // Comparer avec les recettes précédentes pour éviter les re-renders inutiles
         const hasSameRecipes = 
@@ -163,7 +200,11 @@ export default function SearchScreen() {
           Array.from(previousRecipeIdsRef.current).every(id => newRecipeIdsSet.has(id));
 
         // Si ce sont les mêmes recettes, ne pas faire de requête
-        if (hasSameRecipes && previousRecipesRef.current.length > 0) {
+        if (
+          hasSameRecipes &&
+          previousRecipesRef.current.length > 0 &&
+          previousFilterSignatureRef.current === filterSignature
+        ) {
           console.log('✅ [Search] Mêmes recettes, pas de re-render');
           setIsLoading(false);
           return;
@@ -190,11 +231,11 @@ export default function SearchScreen() {
 
         // Récupérer uniquement les nouvelles recettes (celles qui n'étaient pas dans les précédentes)
         let newRecipes: SearchRecipe[] = [];
-        
+
         if (newRecipeIds.length > 0) {
           const { data: newRecipesData, error: newRecipesError } = await supabase
             .from('recipes')
-            .select('id, title, image_url, total_time, servings')
+            .select('id, title, image_url, total_time, servings, meal_type, diet_type')
             .eq('user_id', user.id)
             .in('id', newRecipeIds)
             .order('created_at', { ascending: false });
@@ -202,12 +243,28 @@ export default function SearchScreen() {
           if (newRecipesError) {
             console.error('❌ Erreur lors de la récupération des nouvelles recettes:', newRecipesError);
           } else if (newRecipesData) {
-            newRecipes = newRecipesData;
+            newRecipes = newRecipesData as SearchRecipe[];
           }
         }
 
         // Construire la liste finale : garder les anciennes (même référence) + ajouter les nouvelles
-        const finalRecipes = [...recipesToKeep, ...newRecipes];
+        const matchesFilters = (recipe: SearchRecipe) => {
+          const mealMatch =
+            selectedMealTypes.length === 0 ||
+            (recipe.meal_type ? selectedMealTypes.includes(recipe.meal_type) : false);
+          const dietMatch =
+            selectedDietTypes.length === 0 ||
+            (recipe.diet_type || []).some((value) =>
+              selectedDietTypes.includes(value),
+            );
+
+          return mealMatch && dietMatch;
+        };
+
+        const filteredRecipesToKeep = recipesToKeep.filter(matchesFilters);
+        const filteredNewRecipes = newRecipes.filter(matchesFilters);
+
+        const finalRecipes = [...filteredRecipesToKeep, ...filteredNewRecipes];
         
         // Vérifier si le tableau a vraiment changé (par référence)
         const hasChanged = 
@@ -221,18 +278,103 @@ export default function SearchScreen() {
         }
         
         previousRecipeIdsRef.current = newRecipeIdsSet;
+        previousFilterSignatureRef.current = filterSignature;
       } catch (error) {
         console.error('❌ Erreur lors de la recherche:', error);
         setRecipes([]);
         previousRecipeIdsRef.current = new Set();
         previousRecipesRef.current = [];
+        previousFilterSignatureRef.current = '';
       } finally {
         setIsLoading(false);
       }
     };
 
     searchRecipes();
-  }, [selectedFoodItems, user?.id, foodItemsReady]);
+  }, [
+    selectedFoodItems,
+    user?.id,
+    foodItemsReady,
+    selectedMealTypes,
+    selectedDietTypes,
+  ]);
+
+  useEffect(() => {
+    recentRecipesRequestedRef.current = false;
+    recentFetchInProgressRef.current = false;
+    setRecentRecipes([]);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !foodItemsReady) return;
+
+    const hasNoSearchInput = selectedFoodItems.length === 0;
+    const hasNoFilters = !hasActiveFilters;
+
+    if (!hasNoSearchInput || !hasNoFilters) {
+      return;
+    }
+
+    if (recentRecipesRequestedRef.current || recentFetchInProgressRef.current) {
+      return;
+    }
+
+    let isActive = true;
+
+    const fetchRecentRecipes = async () => {
+      recentFetchInProgressRef.current = true;
+      setIsLoadingRecent(true);
+
+      try {
+        let query = supabase
+          .from('recipes')
+          .select('id, title, image_url, total_time, servings, meal_type, diet_type')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        // Exclure les recettes partagées
+        if (sharedRecipeIds.length > 0) {
+          query = query.not('id', 'in', `(${sharedRecipeIds.join(',')})`);
+        }
+
+        const { data, error } = await query.limit(4);
+
+        if (!isActive) {
+          return;
+        }
+
+        if (error) {
+          console.error('❌ Erreur lors de la récupération des recettes récentes:', error);
+          return;
+        }
+
+        setRecentRecipes((data ?? []) as SearchRecipe[]);
+        recentRecipesRequestedRef.current = true;
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+        console.error('❌ Erreur inattendue lors de la récupération des recettes récentes:', error);
+      } finally {
+        recentFetchInProgressRef.current = false;
+        if (isActive) {
+          setIsLoadingRecent(false);
+        }
+      }
+    };
+
+    fetchRecentRecipes();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    user?.id,
+    foodItemsReady,
+    hasActiveFilters,
+    selectedFoodItems.length,
+    sharedRecipeIds,
+  ]);
 
   const handleRecipePress = useCallback((recipeId: string) => {
     router.push(`/result?recipeId=${recipeId}` as any);
@@ -247,22 +389,68 @@ export default function SearchScreen() {
 
   // Mémoriser la liste des recettes pour éviter les recalculs
   const memoizedRecipes = useMemo(() => recipes, [recipes]);
+  const memoizedRecentRecipes = useMemo(() => recentRecipes, [recentRecipes]);
 
   const dismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
   }, []);
+
+  const toggleMealType = useCallback((value: MealType) => {
+    setSelectedMealTypes((prev) => (prev.includes(value) ? [] : [value]));
+  }, []);
+
+  const toggleDietType = useCallback((value: DietType) => {
+    setSelectedDietTypes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+    );
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSelectedMealTypes([]);
+    setSelectedDietTypes([]);
+  }, []);
+
+  const activeFilterTagColors = useMemo(() => {
+    const theme = Colors[colorScheme ?? 'light'];
+    const isDarkMode = (colorScheme ?? 'light') === 'dark';
+
+    return {
+      background: isDarkMode ? theme.card : theme.secondary,
+      border: theme.border,
+      text: theme.text,
+    };
+  }, [colorScheme]);
+
+  const shouldShowRecentRecipes = selectedFoodItems.length === 0 && !hasActiveFilters;
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}> 
-          Rechercher
-        </Text>
-        <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
-          Trouvez une recette par ingrédient
-        </Text>
+          <View style={styles.headerTextWrapper}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Qu&apos;est-ce que qu&apos;on prépare ?
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
+              Trouvez une recette selon tes envies
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              { borderColor: colors.border, backgroundColor: colors.card },
+            ]}
+            onPress={() => setIsFilterSheetVisible(true)}
+            activeOpacity={0.7}
+          >
+            <SlidersHorizontal size={20} color={colors.primary} />
+            {hasActiveFilters && (
+              <View
+                style={[styles.filterBadge, { backgroundColor: colors.primary }]}
+              />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar with Tags */}
@@ -272,6 +460,55 @@ export default function SearchScreen() {
             onFoodItemsChange={setSelectedFoodItems}
             placeholder="Rechercher un ingrédient..."
           />
+          {hasActiveFilters && (
+            <View style={styles.activeFiltersContainer}>
+              {selectedMealTypes.map((item) => (
+                <View
+                  key={`meal-${item}`}
+                  style={[
+                    styles.activeFilterTag,
+                    {
+                      backgroundColor: activeFilterTagColors.background,
+                      borderColor: activeFilterTagColors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.activeFilterText, { color: activeFilterTagColors.text }]}
+                  >
+                    {formatLabel(item)}
+                  </Text>
+                </View>
+              ))}
+              {selectedDietTypes.map((item) => (
+                <View
+                  key={`diet-${item}`}
+                  style={[
+                    styles.activeFilterTag,
+                    {
+                      backgroundColor: activeFilterTagColors.background,
+                      borderColor: activeFilterTagColors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.activeFilterText, { color: activeFilterTagColors.text }]}
+                  >
+                    {formatLabel(item)}
+                  </Text>
+                </View>
+              ))}
+              <TouchableOpacity
+                onPress={resetFilters}
+                style={styles.clearFiltersButton}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.clearFiltersText, { color: colors.primary }]}>
+                  Effacer
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Results */}
@@ -296,6 +533,39 @@ export default function SearchScreen() {
             windowSize={10}
             initialNumToRender={10}
           />
+        ) : shouldShowRecentRecipes ? (
+          isLoadingRecent ? (
+            <View style={styles.loadingContainer}>
+              <Text style={[styles.loadingText, { color: colors.icon }]}>
+                Chargement des recettes récentes...
+              </Text>
+            </View>
+          ) : memoizedRecentRecipes.length > 0 ? (
+            <FlatList
+              data={memoizedRecentRecipes}
+              renderItem={renderRecipeCard}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={4}
+              updateCellsBatchingPeriod={50}
+              windowSize={4}
+              initialNumToRender={4}
+              ListHeaderComponent={() => (
+                <View style={styles.recentHeader}>
+                  <Text style={[styles.recentTitle, { color: colors.text }]}>Dernières recettes</Text>
+                  <Text style={[styles.recentSubtitle, { color: colors.icon }]}>Vos créations les plus récentes</Text>
+                </View>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>Aucune recette récente disponible</Text>
+            </View>
+          )
         ) : selectedFoodItems.length > 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: colors.icon }]}>
@@ -310,6 +580,17 @@ export default function SearchScreen() {
             </Text>
           </View>
         )}
+
+        <RecipeFilterSheet
+          visible={isFilterSheetVisible}
+          onClose={() => setIsFilterSheetVisible(false)}
+          onApply={() => setIsFilterSheetVisible(false)}
+          onReset={resetFilters}
+          onToggleMealType={toggleMealType}
+          onToggleDietType={toggleDietType}
+          selectedMealTypes={selectedMealTypes}
+          selectedDietTypes={selectedDietTypes}
+        />
       </View>
     </TouchableWithoutFeedback>
   );
@@ -320,14 +601,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xxl + Spacing.xl,
     paddingBottom: Spacing.lg,
   },
+  headerTextWrapper: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 27,
     fontWeight: '700',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   headerSubtitle: {
     fontSize: 16,
@@ -335,6 +623,36 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentHeader: {
+    width: '100%',
+
+    paddingBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
+  recentTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  recentSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 10,
+    height: 10,
+    borderRadius: BorderRadius.full,
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
@@ -355,8 +673,8 @@ const styles = StyleSheet.create({
   recipeImage: {
     width: '100%',
     height: 120,
-    borderTopLeftRadius: BorderRadius.md,
-    borderTopRightRadius: BorderRadius.md,
+    borderTopLeftRadius: BorderRadius.sm,
+    borderTopRightRadius: BorderRadius.sm,
   },
   noImageContainer: {
     alignItems: 'center',
@@ -408,6 +726,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: Spacing.md,
+  },
+  activeFiltersContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  activeFilterTag: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  activeFilterText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  clearFiltersButton: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  clearFiltersText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

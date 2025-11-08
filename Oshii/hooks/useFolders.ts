@@ -10,6 +10,7 @@ import { useNetworkContext } from '@/contexts/NetworkContext';
 import { useFolderStore } from '@/stores/useFolderStore';
 import type { FolderStoreState } from '@/stores/useFolderStore';
 import type { Folder } from '@/types/folder';
+import { SYSTEM_FOLDERS, SYSTEM_FOLDER_NAMES } from '@/constants/systemFolders';
 
 export type DatabaseFolder = Folder;
 
@@ -90,6 +91,16 @@ export function useFolders(): UseFoldersReturn {
         console.log('✅ [Folders]', foldersData?.length || 0, 'dossiers trouvés');
       }
 
+      // Vérifier la session pour obtenir le user_id
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user?.id) {
+        console.error('❌ [Folders] User ID non disponible');
+        return;
+      }
+
+      const currentUserId = session.user.id;
+
       // Optimisation: Récupérer tous les counts en une seule requête avec GROUP BY
       const { data: recipeCounts, error: countError } = await supabase
         .from('recipes')
@@ -103,6 +114,7 @@ export function useFolders(): UseFoldersReturn {
 
       // Créer un Map pour compter les recettes par folder_id
       const countsMap = new Map<string, number>();
+
       if (recipeCounts) {
         recipeCounts.forEach((item) => {
           if (item.folder_id) {
@@ -111,23 +123,54 @@ export function useFolders(): UseFoldersReturn {
         });
       }
 
+      // Compter les recettes partagées AVEC l'utilisateur actuel (reçues)
+      const { data: sharedRecipes, error: sharedError } = await supabase
+        .from('shared_recipes')
+        .select('recipe_id')
+        .eq('shared_with_user_id', currentUserId);
+
+      if (signal?.aborted) return;
+
+      if (sharedError) {
+        console.error('❌ [Folders] Erreur lors du comptage des recettes partagées:', sharedError);
+      }
+
+      const sharedRecipesCount = sharedRecipes?.length || 0;
+
       // Mapper les counts aux folders (plus de N+1 queries!)
       const foldersWithCount = (foldersData || []).map((folder) => ({
         ...folder,
         recipes_count: countsMap.get(folder.id) || 0,
       }));
 
+      // Créer le dossier système "Envoyés" UNIQUEMENT si l'utilisateur a reçu des recettes
+      const allFolders = [...foldersWithCount];
+
+      if (sharedRecipesCount > 0) {
+        const receivedFolder: DatabaseFolder = {
+          id: SYSTEM_FOLDERS.RECEIVED,
+          name: SYSTEM_FOLDER_NAMES[SYSTEM_FOLDERS.RECEIVED],
+          icon_name: 'users', // Icône pour les recettes partagées
+          user_id: '', // Dossier système, pas de user_id
+          created_at: new Date().toISOString(),
+          recipes_count: sharedRecipesCount,
+        };
+
+        // Ajouter le dossier système "Envoyés" au début de la liste
+        allFolders.unshift(receivedFolder);
+      }
+
       if (signal?.aborted) return;
 
       // Vérifier si les données ont vraiment changé avant de mettre à jour l'état
       setFolders((prevFolders: DatabaseFolder[]) => {
         const prevIds = new Set(prevFolders.map(f => f.id));
-        const newIds = new Set(foldersWithCount.map(f => f.id));
+        const newIds = new Set(allFolders.map(f => f.id));
 
         // Vérifier si les IDs sont identiques
         if (prevIds.size === newIds.size && [...prevIds].every(id => newIds.has(id))) {
           // Vérifier si les compteurs ou noms ont changé
-          const hasChanges = foldersWithCount.some(newFolder => {
+          const hasChanges = allFolders.some(newFolder => {
             const prevFolder = prevFolders.find(f => f.id === newFolder.id);
             return !prevFolder ||
                    prevFolder.recipes_count !== newFolder.recipes_count ||
@@ -141,7 +184,7 @@ export function useFolders(): UseFoldersReturn {
         }
 
         // Il y a des changements, mettre à jour
-        return foldersWithCount;
+        return allFolders;
       });
       markFetched();
       hasFetchedRef.current = true;

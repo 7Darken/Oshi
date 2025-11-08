@@ -16,7 +16,6 @@ import { Mail } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { ActivityIndicator, Alert } from 'react-native';
@@ -121,7 +120,11 @@ export default function WelcomeScreen() {
     >
       {/* Logo et nom */}
       <View style={styles.logoSection}>
-        <OshiiLogo size="xl" />
+        <ExpoImage
+          source={require('@/assets/images/imgWelcome.png')}
+          style={styles.welcomeImage}
+          contentFit="contain"
+        />
         <Text style={[styles.appName, { color: colors.text }]}>Oshii</Text>
         <Text style={[styles.description, { color: colors.icon }]}>
           Transforme tes vidéos préférées en recettes
@@ -220,6 +223,10 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: 'center',
     marginBottom: Spacing.xxl * 2,
+  },
+  welcomeImage: {
+    width: 200,
+    height: 200,
   },
   appName: {
     fontSize: 36,

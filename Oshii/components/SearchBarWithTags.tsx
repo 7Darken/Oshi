@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { X } from 'lucide-react-native';
+import { Search, X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
@@ -123,6 +123,7 @@ export function SearchBarWithTags({
     <View style={styles.container}>
       {/* Barre de recherche */}
       <View style={[styles.searchBarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Search size={18} color={colors.icon} style={styles.searchIcon} />
         <TextInput
           ref={inputRef}
           style={[styles.searchInput, { color: colors.text }]}
@@ -231,6 +232,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: Spacing.sm,
+  },
+  searchIcon: {
+    marginRight: Spacing.sm,
   },
   suggestionsContainer: {
     marginTop: Spacing.xs,

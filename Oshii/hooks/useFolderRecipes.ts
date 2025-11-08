@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabase';
 import { FullRecipe } from '@/types/recipe';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { useNetworkContext } from '@/contexts/NetworkContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export interface UseFolderRecipesReturn {
   recipes: FullRecipe[];
@@ -17,10 +18,12 @@ export interface UseFolderRecipesReturn {
 
 /**
  * Hook pour récupérer les recettes d'un dossier spécifique
- * @param folderId - ID du dossier
+ * @param folderId - ID du dossier (null pour "Non enregistrés")
+ * @param isSharedFolder - true si c'est le dossier "Envoyés" (recettes reçues)
  * @returns Objet contenant les recettes, l'état de chargement et les erreurs
  */
-export function useFolderRecipes(folderId: string | null): UseFolderRecipesReturn {
+export function useFolderRecipes(folderId: string | null, isSharedFolder: boolean = false): UseFolderRecipesReturn {
+  const { user } = useAuthContext();
   const [recipes, setRecipes] = useState<FullRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,15 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
       return;
     }
 
+    if (!user?.id) {
+      console.error('❌ [FolderRecipes] User ID non disponible');
+      if (!silent) {
+        setIsLoading(false);
+        setError('Utilisateur non connecté');
+      }
+      return;
+    }
+
     if (!silent) {
       console.log('🌐 [FolderRecipes] Récupération depuis Supabase, folderId:', folderId);
       setIsLoading(true);
@@ -81,20 +93,80 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
     try {
       // Récupérer les recettes avec leurs ingrédients et étapes en une seule requête (optimisé)
       let result;
-      
+
       if (folderId === null) {
-        // Récupérer les recettes orphelines (sans folder_id) avec jointures
-        result = await supabase
-          .from('recipes')
-          .select(`
-            *,
-            ingredients(*),
-            steps(*)
-          `)
-          .is('folder_id', null)
-          .order('created_at', { ascending: false });
-        if (!silent) {
-          console.log('📖 [FolderRecipes] Récupération des recettes orphelines');
+        if (isSharedFolder) {
+          // Dossier "Envoyés": Récupérer uniquement les recettes partagées avec l'utilisateur
+          // Ces recettes ont folder_id = NULL et existent dans shared_recipes
+          const { data: sharedRecipeIds, error: sharedError } = await supabase
+            .from('shared_recipes')
+            .select('recipe_id')
+            .eq('shared_with_user_id', user.id);
+
+          if (sharedError) {
+            console.error('❌ [FolderRecipes] Erreur lors de la récupération des recettes partagées:', sharedError);
+            throw new Error(`Erreur lors de la récupération: ${sharedError.message}`);
+          }
+
+          const recipeIds = sharedRecipeIds?.map(sr => sr.recipe_id) || [];
+
+          if (recipeIds.length === 0) {
+            // Aucune recette partagée
+            result = { data: [], error: null };
+            if (!silent) {
+              console.log('📖 [FolderRecipes] Aucune recette partagée trouvée');
+            }
+          } else {
+            result = await supabase
+              .from('recipes')
+              .select(`
+                *,
+                ingredients(*),
+                steps(*)
+              `)
+              .in('id', recipeIds)
+              .order('created_at', { ascending: false });
+            if (!silent) {
+              console.log('📖 [FolderRecipes] Récupération des recettes partagées (Envoyés)');
+            }
+          }
+        } else {
+          // Dossier "Non enregistrés": Récupérer uniquement les recettes sans folder_id qui ne sont PAS partagées
+          // D'abord, obtenir les IDs des recettes partagées avec l'utilisateur
+          const { data: sharedRecipeIds } = await supabase
+            .from('shared_recipes')
+            .select('recipe_id')
+            .eq('shared_with_user_id', user.id);
+
+          const excludeIds = sharedRecipeIds?.map(sr => sr.recipe_id) || [];
+
+          if (excludeIds.length === 0) {
+            // Aucune recette à exclure, récupérer toutes les recettes orphelines
+            result = await supabase
+              .from('recipes')
+              .select(`
+                *,
+                ingredients(*),
+                steps(*)
+              `)
+              .is('folder_id', null)
+              .order('created_at', { ascending: false });
+          } else {
+            // Exclure les recettes partagées
+            result = await supabase
+              .from('recipes')
+              .select(`
+                *,
+                ingredients(*),
+                steps(*)
+              `)
+              .is('folder_id', null)
+              .not('id', 'in', `(${excludeIds.join(',')})`)
+              .order('created_at', { ascending: false });
+          }
+          if (!silent) {
+            console.log('📖 [FolderRecipes] Récupération des recettes orphelines (Non enregistrés)');
+          }
         }
       } else {
         // Récupérer les recettes d'un dossier spécifique avec jointures
@@ -193,7 +265,7 @@ export function useFolderRecipes(folderId: string | null): UseFolderRecipesRetur
         setIsLoading(false);
       }
     }
-  }, [folderId, isOffline, allRecipes]);
+  }, [folderId, isSharedFolder, isOffline, allRecipes, user]);
 
   // Chargement initial au montage du composant
   useEffect(() => {

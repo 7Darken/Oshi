@@ -4,6 +4,7 @@
 
 import { SelectRecipesSheet } from '@/components/SelectRecipesSheet';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { SYSTEM_FOLDERS, SYSTEM_FOLDER_NAMES, isSystemFolder } from '@/constants/systemFolders';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFolderRecipes } from '@/hooks/useFolderRecipes';
 import { supabase } from '@/services/supabase';
@@ -32,18 +33,34 @@ export default function FolderScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const folderId = params.folderId === 'null' ? null : params.folderId || null;
-  const isOrphanFolder = params.folderId === 'null';
-  const [folderName, setFolderName] = useState(isOrphanFolder ? 'Non enregistrés' : 'Dossier');
+  const rawFolderId = params.folderId;
+  const isSystemFolderReceived = rawFolderId === SYSTEM_FOLDERS.RECEIVED;
+  const isOrphanFolder = rawFolderId === 'null';
 
-  const { recipes, isLoading, error, refresh } = useFolderRecipes(folderId);
+  // Pour le dossier système "Envoyés", utiliser NULL pour récupérer les recettes partagées
+  const folderId = isOrphanFolder || isSystemFolderReceived ? null : rawFolderId || null;
+
+  // Nom initial du dossier
+  const getInitialFolderName = () => {
+    if (isSystemFolderReceived) {
+      return SYSTEM_FOLDER_NAMES[SYSTEM_FOLDERS.RECEIVED];
+    }
+    if (isOrphanFolder) {
+      return 'Non enregistrés';
+    }
+    return 'Dossier';
+  };
+
+  const [folderName, setFolderName] = useState(getInitialFolderName());
+
+  const { recipes, isLoading, error, refresh } = useFolderRecipes(folderId, isSystemFolderReceived);
   const [showSelectSheet, setShowSelectSheet] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Récupérer le nom du dossier si ce n'est pas un dossier fictif
+  // Récupérer le nom du dossier si ce n'est pas un dossier fictif/système
   useEffect(() => {
     const fetchFolderName = async () => {
-      if (folderId && !isOrphanFolder) {
+      if (folderId && !isOrphanFolder && !isSystemFolderReceived) {
         const { data } = await supabase
           .from('folders')
           .select('name')
@@ -57,7 +74,7 @@ export default function FolderScreen() {
     };
 
     fetchFolderName();
-  }, [folderId, isOrphanFolder]);
+  }, [folderId, isOrphanFolder, isSystemFolderReceived]);
 
   // Rafraîchir les recettes quand l'écran redevient actif (optimisé)
   useFocusEffect(
@@ -156,11 +173,15 @@ export default function FolderScreen() {
           </View>
         ) : recipes.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={[styles.emptyText, { color: colors.icon }]}>Ce dossier est vide</Text>
+            <Text style={[styles.emptyText, { color: colors.icon }]}>
+              {isSystemFolderReceived ? 'Aucune recette reçue' : 'Ce dossier est vide'}
+            </Text>
             <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-              {folderId
-                ? 'Ajoutez des recettes à ce dossier pour les voir ici'
-                : 'Vos recettes non classées apparaîtront ici'}
+              {isSystemFolderReceived
+                ? 'Les recettes partagées par vos amis apparaîtront ici'
+                : folderId
+                  ? 'Ajoutez des recettes à ce dossier pour les voir ici'
+                  : 'Vos recettes non classées apparaîtront ici'}
             </Text>
           </View>
         ) : (

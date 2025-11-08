@@ -2,8 +2,12 @@
  * Onglet Profil - Informations utilisateur
  */
 
+import { AddFriendSheet } from '@/components/friends/AddFriendSheet';
+import { FriendsListCard } from '@/components/friends/FriendsListCard';
+import { FriendsSheetNative } from '@/components/friends/FriendsSheetNative';
 import { SettingsSheet } from '@/components/SettingsSheet';
 import { ProfileTypeIcon } from '@/components/ui/ProfileTypeIcon';
+import { ToastNotification } from '@/components/ui/ToastNotification';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -25,6 +29,10 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, profile, refreshProfile, isPremium } = useAuthContext();
   const [showSettings, setShowSettings] = useState(false);
+  const [showFriendsSheet, setShowFriendsSheet] = useState(false);
+  const [showAddFriendSheet, setShowAddFriendSheet] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Utiliser les données du profil depuis le contexte
   const username = profile?.username || null;
@@ -53,6 +61,11 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     await logout();
     router.replace('/welcome');
+  };
+
+  const handleAddFriendSuccess = (username: string) => {
+    setToastMessage(`Demande envoyée à @${username}`);
+    setShowToast(true);
   };
 
 
@@ -90,7 +103,7 @@ export default function ProfileScreen() {
           )}
         </View>
         <Text style={[styles.name, { color: colors.text }]}>
-          {username || user?.email?.split('@')[0] || 'Chef'}
+         @{username || user?.email?.split('@')[0] || 'Chef'}
         </Text>
         {profileType && (
           <View style={[styles.profileTypeTag, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -106,7 +119,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.content}>
-        {/* Container Premium - Visible uniquement si l'utilisateur n'est pas premium */}
+        {/* Container Premium - Visible au-dessus si l'utilisateur n'est pas premium */}
         {!isPremium && (
           <TouchableOpacity
             style={[styles.premiumCard, { backgroundColor: colors.card, borderColor: colors.primary }]}
@@ -130,7 +143,13 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Container Oshii Pro - Visible uniquement si l'utilisateur est premium */}
+        {/* Section Amis */}
+        <FriendsListCard
+          onSeeAll={() => setShowFriendsSheet(true)}
+          onAddFriend={() => setShowAddFriendSheet(true)}
+        />
+
+        {/* Container Oshii Pro - Visible en dessous si l'utilisateur est premium */}
         {isPremium && (
           <View style={[styles.proCard, { backgroundColor: colors.card, borderColor: 'rgba(239, 68, 68, 0.2)' }]}>
             <View style={styles.proHeader}>
@@ -174,11 +193,28 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <AddFriendSheet
+        visible={showAddFriendSheet}
+        onClose={() => setShowAddFriendSheet(false)}
+        onSuccess={handleAddFriendSuccess}
+      />
+
+      <FriendsSheetNative
+        visible={showFriendsSheet}
+        onClose={() => setShowFriendsSheet(false)}
+      />
+
       <SettingsSheet
         visible={showSettings}
         onClose={() => setShowSettings(false)}
         onLogout={handleLogout}
         user={user}
+      />
+
+      <ToastNotification
+        visible={showToast}
+        message={toastMessage}
+        onHide={() => setShowToast(false)}
       />
     </ScrollView>
   );

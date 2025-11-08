@@ -7,6 +7,8 @@ import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
 import { FolderSelectorSheet } from '@/components/FolderSelectorSheet';
 import RecipeCardPreviewComponent, { PreviewIngredient, PreviewMacros } from '@/components/RecipeCardPreview';
 import { SelectIngredientsSheet } from '@/components/SelectIngredientsSheet';
+import { ShareOptionsSheet } from '@/components/recipe/ShareOptionsSheet';
+import { ShareToFriendSheet } from '@/components/recipe/ShareToFriendSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IngredientCard } from '@/components/ui/IngredientCard';
@@ -70,6 +72,9 @@ export default function ResultScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [useSpoonConversion, setUseSpoonConversion] = useState(false);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [showShareToFriend, setShowShareToFriend] = useState(false);
+  const [isSharingToFriend, setIsSharingToFriend] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -409,12 +414,17 @@ export default function ResultScreen() {
     };
   }, [adjustedMacros]);
 
-  const handleExportRecipePreview = useCallback(async () => {
+  const handleExportRecipePreview = useCallback(() => {
     if (!isPremium) {
       router.push('/subscription');
       return;
     }
 
+    // Ouvrir le sheet d'options de partage
+    setShowShareOptions(true);
+  }, [isPremium, router]);
+
+  const handleExportImage = useCallback(async () => {
     if (!previewRef.current || !recipe) {
       return;
     }
@@ -445,7 +455,60 @@ export default function ResultScreen() {
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [isPremium, recipe, router]);
+  }, [recipe]);
+
+  const handleShareToFriendOpen = useCallback(() => {
+    setShowShareToFriend(true);
+  }, []);
+
+  const handleShareToFriend = useCallback(async (friendId: string, message?: string) => {
+    if (!recipe || !user) {
+      return;
+    }
+
+    try {
+      setIsSharingToFriend(true);
+
+      // Récupérer l'ID du vrai ami (user_id) depuis le friendship
+      const { data: friendship, error: friendshipError } = await supabase
+        .from('friendships')
+        .select('user_id_1, user_id_2')
+        .eq('id', friendId)
+        .single();
+
+      if (friendshipError || !friendship) {
+        throw new Error('Ami introuvable');
+      }
+
+      // Déterminer l'ID de l'ami (celui qui n'est pas l'utilisateur actuel)
+      const friendUserId = friendship.user_id_1 === user.id
+        ? friendship.user_id_2
+        : friendship.user_id_1;
+
+      // Partager la recette via la table shared_recipes
+      const { error: shareError } = await supabase
+        .from('shared_recipes')
+        .insert({
+          recipe_id: recipe.id,
+          shared_by_user_id: user.id,
+          shared_with_user_id: friendUserId,
+          message: message || null,
+        });
+
+      if (shareError) {
+        console.error('❌ [Result] Share error:', shareError);
+        throw shareError;
+      }
+
+      Alert.alert('Recette partagée', 'La recette a été partagée avec succès !');
+      setShowShareToFriend(false);
+    } catch (err: any) {
+      console.error('❌ [Result] Share to friend error:', err);
+      Alert.alert('Erreur', "Impossible de partager la recette.");
+    } finally {
+      setIsSharingToFriend(false);
+    }
+  }, [recipe, user]);
 
   // Ne rien afficher si en chargement
   if (isLoading || !recipe) {
@@ -818,7 +881,7 @@ export default function ResultScreen() {
                   >
                     <View style={styles.macroBlurContent}>
                       <Text style={[styles.macroBlurTitle, { color: colors.text }]}>Oshii Premium</Text>
-                      <Text style={[styles.macroBlurSubtitle, { color: colors.icon }]}>Débloquez l’accès aux macros détaillées</Text>
+                      <Text style={[styles.macroBlurSubtitle, { color: colors.icon }]}>Débloquez l'accès aux macros détaillées</Text>
                       <TouchableOpacity
                         style={[styles.macroBlurButton, { backgroundColor: colors.primary }]}
                         activeOpacity={0.8}
@@ -830,6 +893,53 @@ export default function ResultScreen() {
                   </BlurView>
                 )}
               </Card>
+            </View>
+          )}
+
+          {/* Section Équipement */}
+          {(() => {
+            console.log('🔧 [Equipment Debug]', {
+              hasRecipe: !!recipe,
+              hasEquipmentKey: recipe && 'equipment' in recipe,
+              equipmentValue: recipe && 'equipment' in recipe ? recipe.equipment : 'N/A',
+              isArray: recipe && 'equipment' in recipe ? Array.isArray(recipe.equipment) : false,
+              length: recipe && 'equipment' in recipe && Array.isArray(recipe.equipment) ? recipe.equipment.length : 0,
+            });
+            return null;
+          })()}
+          {recipe && 'equipment' in recipe && Array.isArray(recipe.equipment) && recipe.equipment.length > 0 && (
+            <View style={styles.equipmentSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Équipement</Text>
+              <View style={styles.equipmentGrid}>
+                {recipe.equipment.map((item: string, index: number) => {
+                  const equipmentMap: { [key: string]: { name: string; icon: any } } = {
+                    'four': { name: 'Four', icon: require('@/assets/Equipment/four.png') },
+                    'micro-ondes': { name: 'Micro-ondes', icon: require('@/assets/Equipment/micro-ondes.png') },
+                    'air fryer': { name: 'Air Fryer', icon: require('@/assets/Equipment/air-fryer.png') },
+                    'mixeur': { name: 'Mixeur', icon: require('@/assets/Equipment/mixeur.png') },
+                    'poêle': { name: 'Poêle', icon: require('@/assets/Equipment/poele.png') },
+                    'poele': { name: 'Poêle', icon: require('@/assets/Equipment/poele.png') },
+                  };
+
+                  const equipment = equipmentMap[item.toLowerCase()];
+                  if (!equipment) return null;
+
+                  return (
+                    <View key={index} style={[styles.equipmentItem]}>
+                      <View style={[styles.equipmentIconContainer, { backgroundColor: `${colors.primary}05` }]}>
+                        <ExpoImage
+                          source={equipment.icon}
+                          style={styles.equipmentIcon}
+                          contentFit="contain"
+                        />
+                      </View>
+                      <Text style={[styles.equipmentName, { color: colors.text }]}>
+                        {equipment.name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -1136,6 +1246,22 @@ export default function ResultScreen() {
           isDeleting={isDeleting}
         />
       )}
+
+      {/* Sheet d'options de partage */}
+      <ShareOptionsSheet
+        visible={showShareOptions}
+        onClose={() => setShowShareOptions(false)}
+        onExportImage={handleExportImage}
+        onShareToFriend={handleShareToFriendOpen}
+      />
+
+      {/* Sheet de partage à un ami */}
+      <ShareToFriendSheet
+        visible={showShareToFriend}
+        onClose={() => setShowShareToFriend(false)}
+        onShare={handleShareToFriend}
+        isSharing={isSharingToFriend}
+      />
     </View>
   );
 }
@@ -1321,6 +1447,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  equipmentSection: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+  equipmentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  equipmentItem: {
+    alignItems: 'center',
+
+    borderRadius: BorderRadius.lg,
+    width: (100 / 3 - Spacing.md),
+    minWidth: 90,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  equipmentIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  equipmentIcon: {
+    width: 40,
+    height: 40,
+  },
+  equipmentName: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   macrosHeadlineRow: {
     flexDirection: 'row',

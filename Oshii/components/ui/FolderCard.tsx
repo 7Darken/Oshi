@@ -5,7 +5,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { MoreVertical } from 'lucide-react-native';
+import { MoreVertical, Lock } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -15,6 +15,7 @@ interface FolderCardProps {
   iconName?: string;
   onPress?: () => void;
   onOptionsPress?: () => void;
+  isLocked?: boolean;
 }
 
 // Palette de couleurs pour les icônes de dossiers (basée sur le nom pour la cohérence)
@@ -54,6 +55,7 @@ export const FolderCard = React.memo(({
   iconName = 'cooking-pot',
   onPress,
   onOptionsPress,
+  isLocked = false,
 }: FolderCardProps) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -75,8 +77,15 @@ export const FolderCard = React.memo(({
         </View>
       </View>
 
+      {/* Icône de cadenas pour les dossiers verrouillés */}
+      {isLocked && (
+        <View style={[styles.lockBadge, { backgroundColor: colors.primary }]}>
+          <Lock size={14} color="#FFFFFF" strokeWidth={2.5} />
+        </View>
+      )}
+
       {/* Menu options */}
-      {onOptionsPress && (
+      {onOptionsPress && !isLocked && (
         <TouchableOpacity
           style={styles.optionsButton}
           onPress={onOptionsPress}
@@ -126,6 +135,24 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   optionsButton: {
     position: 'absolute',

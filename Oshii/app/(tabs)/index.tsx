@@ -27,19 +27,22 @@ import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useFolders } from '@/hooks/useFolders';
+import { useSharedRecipeIds } from '@/hooks/useSharedRecipeIds';
+import { SYSTEM_FOLDERS } from '@/constants/systemFolders';
 
 // Composant mémorisé pour le container des dossiers (évite les re-renders inutiles)
-const FoldersContainer = React.memo(({ 
-  folders, 
-  orphanCount, 
-  colors, 
+const FoldersContainer = React.memo(({
+  folders,
+  orphanCount,
+  colors,
   colorScheme,
-  router, 
+  router,
   handleFolderPress,
   setShowFolderSheet,
   isPremium,
   freeGenerationsRemaining,
-  cardWidth
+  cardWidth,
+  onOpenPaywall,
 }: {
   folders: { id: string; name: string; icon_name?: string; recipes_count?: number }[];
   orphanCount: number;
@@ -51,6 +54,7 @@ const FoldersContainer = React.memo(({
   isPremium: boolean;
   freeGenerationsRemaining: number;
   cardWidth: number;
+  onOpenPaywall: () => void;
 }) => {
   if (folders.length === 0 && orphanCount === 0) return null;
 
@@ -89,16 +93,28 @@ const FoldersContainer = React.memo(({
           </View>
         )}
         {/* Dossiers réels */}
-        {folders.map((folder) => (
-          <View key={folder.id} style={{ width: cardWidth }}>
-            <FolderCard
-              name={folder.name}
-              recipeCount={folder.recipes_count || 0}
-              iconName={folder.icon_name}
-              onPress={() => handleFolderPress(folder.id, folder.name)}
-            />
-          </View>
-        ))}
+        {folders.map((folder) => {
+          const isReceivedFolder = folder.id === SYSTEM_FOLDERS.RECEIVED;
+          const isLocked = isReceivedFolder && !isPremium;
+
+          return (
+            <View key={folder.id} style={{ width: cardWidth }}>
+              <FolderCard
+                name={folder.name}
+                recipeCount={folder.recipes_count || 0}
+                iconName={folder.icon_name}
+                isLocked={isLocked}
+                onPress={() => {
+                  if (isLocked) {
+                    onOpenPaywall();
+                  } else {
+                    handleFolderPress(folder.id, folder.name);
+                  }
+                }}
+              />
+            </View>
+          );
+        })}
         {/* Carte "+ Nouveau dossier" */}
         <TouchableOpacity
           style={[styles.newFolderCard, { backgroundColor: colors.card, borderColor: colors.border, width: cardWidth }]}
@@ -133,6 +149,7 @@ export default function HomeScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const { recipes, isLoading: recipesLoading, error: recipesError, refresh: refreshRecipes } = useRecipes();
   const { folders, createFolder, refresh: refreshFolders } = useFolders();
+  const { sharedRecipeIds } = useSharedRecipeIds();
   const { isPremium, profile, refreshFreeGenerations, user } = useAuthContext();
   const hasOpenedPaywall = useRef(false);
   const lastRefreshTime = useRef<number>(0);
@@ -176,9 +193,18 @@ export default function HomeScreen() {
   }, [isPremium, user?.id, refreshFreeGenerations]);
 
   // Calculer les recettes non associées à un dossier (mémorisé pour éviter les re-renders)
+  // Exclure les recettes partagées (qui sont dans le dossier "Envoyés")
   const orphanCount = useMemo(() => {
-    return recipes.filter((recipe) => !recipe.folder_id).length;
-  }, [recipes]);
+    return recipes.filter((recipe) => {
+      // Exclure les recettes avec folder_id
+      if (recipe.folder_id) return false;
+
+      // Exclure les recettes partagées
+      if (sharedRecipeIds.includes(recipe.id)) return false;
+
+      return true;
+    }).length;
+  }, [recipes, sharedRecipeIds]);
 
 
   const handleFolderPress = useCallback((folderId: string, folderName: string) => {
@@ -189,6 +215,10 @@ export default function HomeScreen() {
     const newFolder = await createFolder(name, iconName);
     return !!newFolder;
   };
+
+  const handleOpenPaywall = useCallback(() => {
+    router.push('/subscription' as any);
+  }, [router]);
 
   // Rafraîchir les dossiers, recettes et free_generations_remaining quand l'écran redevient actif (optimisé avec debounce)
   useFocusEffect(
@@ -281,6 +311,7 @@ export default function HomeScreen() {
           isPremium={isPremium}
           freeGenerationsRemaining={profile?.free_generations_remaining ?? 0}
           cardWidth={cardWidth}
+          onOpenPaywall={handleOpenPaywall}
         />
 
         {/* Empty state si aucune recette */}

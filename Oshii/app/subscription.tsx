@@ -46,7 +46,7 @@ export default function SubscriptionScreen() {
     'Analyse vidéo prioritaire',
     'Export de vos recettes en Image',
     'Partagez vos recettes préférées',
-    'Accès aux fonctionnalités bêta',
+    'Accèdez aux recettes de vos amis',
   ];
 
   // Calculer le pourcentage d'économie de l'abonnement annuel

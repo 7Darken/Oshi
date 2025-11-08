@@ -140,26 +140,15 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const [rootViewReady, setRootViewReady] = useState(false);
-
   useEffect(() => {
+    // Empêcher le splash screen de se cacher automatiquement
     SplashScreen.preventAutoHideAsync().catch(() => {
       // Ignore errors (already hidden)
     });
   }, []);
 
-  useEffect(() => {
-    if (rootViewReady) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [rootViewReady]);
-
-  const onLayoutRootView = useCallback(() => {
-    setRootViewReady(true);
-  }, []);
-
   return (
-    <View style={styles.root} onLayout={onLayoutRootView}>
+    <View style={styles.root}>
       <SafeAreaProvider>
         <NetworkProvider>
           <AuthProvider>

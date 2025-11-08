@@ -41,6 +41,7 @@ export default function OnboardingScreen() {
   const [username, setUsername] = useState('');
   const [profileType, setProfileType] = useState<ProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -57,17 +58,18 @@ export default function OnboardingScreen() {
     if (!username) {
       // D'abord, utiliser le username du profil
       if (profile?.username) {
-        setUsername(profile.username);
+        setUsername(profile.username.replace(/\s+/g, '')); // Enlever les espaces
       } else if (user?.user_metadata) {
-        // Sinon, essayer d'extraire le nom depuis user_metadata (Google)
+        // Sinon, essayer d'extraire le nom depuis user_metadata (Google/Apple)
         const userMetadata = user.user_metadata || {};
-        const googleName = 
-          userMetadata.full_name || 
+        const googleName =
+          userMetadata.full_name ||
           userMetadata.name ||
           `${userMetadata.first_name || ''} ${userMetadata.last_name || ''}`.trim();
-        
+
         if (googleName) {
-          setUsername(googleName);
+          // Enlever tous les espaces du nom pour Google/Apple signup
+          setUsername(googleName.replace(/\s+/g, ''));
         }
       }
     }
@@ -103,7 +105,39 @@ export default function OnboardingScreen() {
       if (!username.trim()) {
         return;
       }
-      setCurrentStep(2);
+
+      // Vérifier l'unicité du username
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username.trim())
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('Erreur lors de la vérification du username:', checkError);
+          setError('Une erreur est survenue');
+          setIsLoading(false);
+          return;
+        }
+
+        // Si un profil existe avec ce username et que ce n'est pas l'utilisateur actuel
+        if (data && data.id !== user?.id) {
+          setError('Ce prénom est déjà pris');
+          setIsLoading(false);
+          return;
+        }
+
+        setCurrentStep(2);
+      } catch (err) {
+        console.error('Erreur lors de la vérification du username:', err);
+        setError('Une erreur est survenue');
+      } finally {
+        setIsLoading(false);
+      }
     } else if (currentStep === 2) {
       if (!profileType) {
         return;
@@ -191,18 +225,28 @@ export default function OnboardingScreen() {
                   styles.input,
                   {
                     backgroundColor: colors.card,
-                    borderColor: colors.border,
+                    borderColor: error ? colors.primary : colors.border,
                     color: colors.text,
                   },
                 ]}
                 placeholder="Votre prénom"
                 placeholderTextColor={colors.icon}
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={(text) => {
+                  // Enlever tous les espaces
+                  const cleanedText = text.replace(/\s+/g, '');
+                  setUsername(cleanedText);
+                  setError(null); // Réinitialiser l'erreur lors de la saisie
+                }}
                 autoCapitalize="words"
                 autoCorrect={false}
                 maxLength={30}
               />
+              {error && (
+                <Text style={[styles.errorText, { color: colors.primary }]}>
+                  {error}
+                </Text>
+              )}
             </View>
           )}
 
@@ -389,6 +433,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
     marginTop: Spacing.md,
+  },
+  errorText: {
+    width: '100%',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: Spacing.sm,
+    textAlign: 'center',
   },
   optionsContainer: {
     width: '100%',

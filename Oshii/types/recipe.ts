@@ -65,6 +65,9 @@ export interface DatabaseRecipe {
   proteins: number | null;
   carbs: number | null;
   fats: number | null;
+  equipment: string[] | null;
+  meal_type?: string | null;
+  diet_type?: string[] | null;
 }
 
 export interface DatabaseIngredient {
