@@ -20,11 +20,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   Keyboard,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
 
 const formatLabel = (value: string) =>
@@ -424,91 +425,44 @@ export default function SearchScreen() {
   const shouldShowRecentRecipes = selectedFoodItems.length === 0 && !hasActiveFilters;
 
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
           <View style={styles.headerTextWrapper}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Qu&apos;est-ce que qu&apos;on prépare ?
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
-              Trouvez une recette selon tes envies
+              Qu&apos;est ce qu&apos;on prépare ?
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              { borderColor: colors.border, backgroundColor: colors.card },
-            ]}
-            onPress={() => setIsFilterSheetVisible(true)}
-            activeOpacity={0.7}
-          >
-            <SlidersHorizontal size={20} color={colors.primary} />
-            {hasActiveFilters && (
-              <View
-                style={[styles.filterBadge, { backgroundColor: colors.primary }]}
-              />
-            )}
-          </TouchableOpacity>
         </View>
 
-        {/* Search Bar with Tags */}
+        {/* Search Bar with Filter Button */}
         <View style={styles.searchContainer}>
-          <SearchBarWithTags
-            selectedFoodItems={selectedFoodItems}
-            onFoodItemsChange={setSelectedFoodItems}
-            placeholder="Rechercher un ingrédient..."
-          />
-          {hasActiveFilters && (
-            <View style={styles.activeFiltersContainer}>
-              {selectedMealTypes.map((item) => (
-                <View
-                  key={`meal-${item}`}
-                  style={[
-                    styles.activeFilterTag,
-                    {
-                      backgroundColor: activeFilterTagColors.background,
-                      borderColor: activeFilterTagColors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.activeFilterText, { color: activeFilterTagColors.text }]}
-                  >
-                    {formatLabel(item)}
-                  </Text>
-                </View>
-              ))}
-              {selectedDietTypes.map((item) => (
-                <View
-                  key={`diet-${item}`}
-                  style={[
-                    styles.activeFilterTag,
-                    {
-                      backgroundColor: activeFilterTagColors.background,
-                      borderColor: activeFilterTagColors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.activeFilterText, { color: activeFilterTagColors.text }]}
-                  >
-                    {formatLabel(item)}
-                  </Text>
-                </View>
-              ))}
-              <TouchableOpacity
-                onPress={resetFilters}
-                style={styles.clearFiltersButton}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.clearFiltersText, { color: colors.primary }]}>
-                  Effacer
-                </Text>
-              </TouchableOpacity>
+          <View style={styles.searchInputRow}>
+            <View style={styles.searchInputWrapper}>
+              <SearchBarWithTags
+                selectedFoodItems={selectedFoodItems}
+                onFoodItemsChange={setSelectedFoodItems}
+                placeholder="Rechercher un ingrédient..."
+              />
             </View>
-          )}
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                { borderColor: colors.border, backgroundColor: colors.card },
+              ]}
+              onPress={() => setIsFilterSheetVisible(true)}
+              activeOpacity={0.7}
+            >
+              <SlidersHorizontal size={20} color={colors.primary} />
+              {hasActiveFilters && (
+                <View
+                  style={[styles.filterBadge, { backgroundColor: colors.primary }]}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Results */}
@@ -591,8 +545,9 @@ export default function SearchScreen() {
           selectedMealTypes={selectedMealTypes}
           selectedDietTypes={selectedDietTypes}
         />
-      </View>
-    </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }
 
@@ -600,29 +555,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  content: {
+    flex: 1,
+  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xxl + Spacing.xl,
-    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   headerTextWrapper: {
     flex: 1,
-    marginRight: Spacing.md,
   },
   headerTitle: {
     fontSize: 27,
     fontWeight: '700',
-    marginBottom: Spacing.md,
-  },
-  headerSubtitle: {
-    fontSize: 16,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  searchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  searchInputWrapper: {
+    flex: 1,
   },
   filterButton: {
     width: 44,
@@ -727,18 +685,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.md,
   },
-  activeFiltersContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: Spacing.sm,
+  activeFiltersWrapper: {
     marginTop: Spacing.sm,
   },
+  activeFiltersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
   activeFilterTag: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingLeft: Spacing.sm + 2,
+    paddingRight: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
+  },
+  activeFilterIcon: {
+    width: 18,
+    height: 18,
   },
   activeFilterText: {
     fontSize: 13,

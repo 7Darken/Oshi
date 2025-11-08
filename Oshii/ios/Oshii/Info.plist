@@ -47,6 +47,10 @@
     </dict>
     <key>NSFaceIDUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>L'application a besoin d'accéder à vos photos pour changer votre photo de profil.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>L'application a besoin d'enregistrer des photos dans votre galerie.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

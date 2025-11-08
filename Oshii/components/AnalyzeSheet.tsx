@@ -161,16 +161,34 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
               <View style={styles.content}>
           {/* Cards avec logos superposés */}
           <View style={styles.logosContainer}>
-            {/* Carte TikTok (background, rotation horaire) */}
-            <View style={[styles.logoCard, styles.tiktokCard, { backgroundColor: colors.card, overflow: 'hidden' }]}
-            >
-  <ExpoImage
-                source={require('@/assets/logo/Tiktoklogo.jpg')}
-                style={styles.tiktokLogo}
-                contentFit="cover"
+            {/* Carte YouTube (plus en arrière, rotation horaire très forte) */}
+            <View style={[styles.logoCard, styles.youtubeCard, { backgroundColor: colors.card, overflow: 'hidden' }]}>
+              <ExpoImage
+                source={require('@/assets/logo/YoutubeLogo.png')}
+                style={styles.youtubeLogo}
+                contentFit="contain"
               />
             </View>
-            
+
+            {/* Carte Instagram (background, rotation horaire forte) */}
+            <View style={[styles.logoCard, styles.instagramCard, { backgroundColor: colors.card, overflow: 'hidden' }]}>
+              <ExpoImage
+                source={require('@/assets/logo/InstagramLogo.png')}
+                style={styles.instagramLogo}
+                contentFit="contain"
+              />
+            </View>
+
+            {/* Carte TikTok (middle, rotation horaire) */}
+            <View style={[styles.logoCard, styles.tiktokCard, { backgroundColor: colors.card, overflow: 'hidden' }]}
+            >
+              <ExpoImage
+                source={require('@/assets/logo/Tiktoklogo.jpg')}
+                style={styles.tiktokLogo}
+                contentFit="contain"
+              />
+            </View>
+
             {/* Carte Oshii (foreground, rotation antihoraire) */}
             <View style={[styles.logoCard, styles.oshiiCard, { backgroundColor: colors.card }]}>
               <OshiiLogo size="xl" />
@@ -179,12 +197,12 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
 
           {/* Description */}
           <Text style={[styles.description, { color: colors.text }]}>
-            Collez un lien TikTok pour transformer la vidéo en recette
+            Collez un lien (Tiktok, YouTube, Instagram) pour transformer la vidéo en recette
           </Text>
 
           {/* Label avec container de générations sur la même ligne */}
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: colors.text }]}>Lien TikTok</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Lien (Tiktok, YouTube, Instagram)</Text>
             {!isPremium && profile && (
               <View style={[styles.generationsContainer, { 
                 backgroundColor: colorScheme === 'dark' 
@@ -305,24 +323,50 @@ const styles = StyleSheet.create({
     opacity: 0.97,
   },
   oshiiCard: {
-    transform: [{ rotate: '-6deg' }],
-    zIndex: 2,
-    top: 10,
+    transform: [{ rotate: '0deg' }],
+    zIndex: 4,
     alignSelf: 'center',
-    marginLeft: -15,
+    opacity: 1,
   },
   tiktokCard: {
-    transform: [{ rotate: '6deg' }],
-    zIndex: 1,
-    top: 10,
-    alignSelf: 'center',
-    marginRight: -15,
-    opacity: 0.75,
+    width: 110,
+    height: 160,
+    transform: [{ rotate: '-15deg' }, { scale: 0.75 }, { translateX: -20 }],
+    zIndex: 2,
+    left: -0,
+    top: -0,
+    opacity: 0.7,
   },
   tiktokLogo: {
-    width: '100%',
+    width: '70%',
     height: '100%',
-    borderRadius: BorderRadius.md + 4,
+    borderRadius: BorderRadius.xl + 4,
+  },
+  instagramCard: {
+    width: 100,
+    height: 180,
+    transform: [{ rotate: '15deg' }, { scale: 0.75 }, { translateX: 20 }],
+    zIndex: 2,
+    right: 10,
+    top: 40,
+    opacity: 0.7,
+  },
+  instagramLogo: {
+    width: '70%',
+    height: '70%',
+  },
+  youtubeCard: {
+    width: 80,
+    height: 100,
+    transform: [{ rotate: '8deg' }, { scale: 0.5 }],
+    zIndex: 1,
+    right: 50,
+    top: -40,
+    opacity: 0.5,
+  },
+  youtubeLogo: {
+    width: '65%',
+    height: '65%',
   },
   description: {
     fontSize: 16,

@@ -1,5 +1,16 @@
+import {
+  DIET_TYPES_CONFIG,
+  DietType,
+  MEAL_TYPES_CONFIG,
+  MealType,
+} from '@/constants/recipeCategories';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Image as ExpoImage } from 'expo-image';
+import { X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import {
+  ImageSourcePropType,
   Modal,
   Platform,
   SafeAreaView,
@@ -9,26 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { X } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  DIET_TYPES,
-  MEAL_TYPES,
-  DietType,
-  MealType,
-} from '@/constants/recipeCategories';
-
-const formatLabel = (value: string) =>
-  value
-    .split(' ')
-    .map((segment) =>
-      segment
-        .split('-')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join('-'),
-    )
-    .join(' ');
 
 interface RecipeFilterSheetProps {
   visible: boolean;
@@ -55,63 +46,109 @@ export function RecipeFilterSheet({
   const colors = Colors[colorScheme ?? 'light'];
   const shadowColor = colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.12)';
 
+  const totalSelectedFilters = selectedMealTypes.length + selectedDietTypes.length;
+
   const renderFilterOption = useCallback(
-    (label: string, isActive: boolean, onPress: () => void, key?: string) => (
+    (label: string, icon: ImageSourcePropType | undefined, isActive: boolean, onPress: () => void, key?: string) => (
       <TouchableOpacity
         key={key ?? label}
         style={[
           styles.filterOption,
           {
-            backgroundColor: colors.card,
+            backgroundColor: isActive
+              ? (colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)')
+              : colors.card,
             borderColor: isActive ? colors.primary : colors.border,
-            shadowColor,
+            borderWidth: isActive ? 1.5 : 1,
           },
         ]}
         onPress={onPress}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
+        {icon && (
+          <ExpoImage
+            source={icon}
+            style={styles.filterIcon}
+            contentFit="contain"
+          />
+        )}
         <Text
           style={[
             styles.filterOptionText,
-            { color: isActive ? colors.primary : colors.text },
+            {
+              color: colors.text,
+              fontWeight: isActive ? '600' : '500',
+            },
           ]}
         >
-          {formatLabel(label)}
+          {label}
         </Text>
       </TouchableOpacity>
     ),
-    [colors.primary, colors.card, colors.border, colors.text, shadowColor],
+    [colors.primary, colors.card, colors.border, colors.text, colorScheme],
+  );
+
+  const renderMealTypeCard = useCallback(
+    (label: string, icon: ImageSourcePropType | undefined, isActive: boolean, onPress: () => void, key?: string) => (
+      <TouchableOpacity
+        key={key ?? label}
+        style={[
+          styles.mealTypeCard,
+          {
+            backgroundColor: isActive
+              ? (colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)')
+              : colors.card,
+            borderColor: isActive ? colors.primary : colors.border,
+            borderWidth: isActive ? 1.5 : 1,
+          },
+        ]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        {icon && (
+          <ExpoImage
+            source={icon}
+            style={styles.mealTypeIcon}
+            contentFit="contain"
+          />
+        )}
+        <Text
+          style={[
+            styles.mealTypeText,
+            {
+              color: colors.text,
+              fontWeight: isActive ? '600' : '500',
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [colors.primary, colors.card, colors.border, colors.text, colorScheme],
   );
 
   const renderSection = useCallback(
     (
       title: string,
       selectedCount: number,
-      description: string,
       children: React.ReactNode,
     ) => (
-      <View
-        key={title}
-        style={[
-          styles.sectionCard,
-          { backgroundColor: colors.card, borderColor: colors.border, shadowColor },
-        ]}
-      >
+      <View key={title} style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
           {selectedCount > 0 && (
             <View style={[styles.sectionBadge, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.sectionBadgeText, { color: colors.background }]}>
+              <Text style={[styles.sectionBadgeText, { color: '#FFFFFF' }]}>
                 {selectedCount}
               </Text>
             </View>
           )}
         </View>
-        <Text style={[styles.sectionDescription, { color: colors.icon }]}>{description}</Text>
         <View style={styles.tagsGrid}>{children}</View>
       </View>
     ),
-    [colors.card, colors.border, colors.icon, colors.primary, colors.text, colors.background, shadowColor],
+    [colors.icon, colors.primary, colors.text],
   );
 
   return (
@@ -125,16 +162,28 @@ export function RecipeFilterSheet({
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
       >
+        {/* Pill drag indicator */}
+        <View style={styles.pillContainer}>
+          <View style={[styles.pill, { backgroundColor: colors.border }]} />
+        </View>
+
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}> 
-            Filtres de recette
-          </Text>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Filtres
+            </Text>
+            {totalSelectedFilters > 0 && (
+              <View style={[styles.filterCountBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.filterCountText}>{totalSelectedFilters}</Text>
+              </View>
+            )}
+          </View>
           <TouchableOpacity
             onPress={onClose}
-            style={styles.closeButton}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={[styles.closeButton, { backgroundColor: colors.card }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <X size={22} color={colors.icon} />
+            <X size={20} color={colors.text} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
@@ -143,57 +192,73 @@ export function RecipeFilterSheet({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {renderSection(
-            'Type de repas',
-            selectedMealTypes.length,
-            'Filtrez par moment de dégustation ou format du plat.',
-            MEAL_TYPES.map((option) =>
-              renderFilterOption(
-                option,
-                selectedMealTypes.includes(option),
-                () => onToggleMealType(option),
-                `meal-${option}`,
-              ),
-            ),
-          )}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Type de repas</Text>
+              {selectedMealTypes.length > 0 && (
+                <View style={[styles.sectionBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.sectionBadgeText, { color: '#FFFFFF' }]}>
+                    {selectedMealTypes.length}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.mealTypesGrid}>
+              {MEAL_TYPES_CONFIG.map((option) =>
+                renderMealTypeCard(
+                  option.label,
+                  option.icon,
+                  selectedMealTypes.includes(option.value),
+                  () => onToggleMealType(option.value),
+                  `meal-${option.value}`,
+                ),
+              )}
+            </View>
+          </View>
 
           {renderSection(
             'Type de régime',
             selectedDietTypes.length,
-            'Combinez plusieurs régimes compatibles pour affiner vos résultats.',
-            DIET_TYPES.map((option) =>
+            DIET_TYPES_CONFIG.map((option) =>
               renderFilterOption(
-                option,
-                selectedDietTypes.includes(option),
-                () => onToggleDietType(option),
-                `diet-${option}`,
+                option.label,
+                option.icon,
+                selectedDietTypes.includes(option.value),
+                () => onToggleDietType(option.value),
+                `diet-${option.value}`,
               ),
             ),
           )}
         </ScrollView>
 
         <View
-          style={[styles.actions, { borderTopColor: colors.border }]}
+          style={[styles.actions, { backgroundColor: colors.background, borderTopColor: colors.border }]}
         >
           <TouchableOpacity
             style={[
               styles.secondaryButton,
-              { borderColor: colors.border, backgroundColor: colors.card },
+              { backgroundColor: colors.card },
             ]}
             onPress={onReset}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
+            disabled={totalSelectedFilters === 0}
           >
-            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+            <Text style={[
+              styles.secondaryButtonText,
+              { color: totalSelectedFilters === 0 ? colors.icon : colors.text }
+            ]}>
               Réinitialiser
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: colors.primary }]}
             onPress={onApply}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.primaryButtonText, { color: colors.background }]}>
-              Appliquer
+            <Text style={styles.primaryButtonText}>
+              {totalSelectedFilters > 0
+                ? `Afficher les résultats (${totalSelectedFilters})`
+                : 'Afficher tout'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -206,63 +271,91 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  pillContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
+  pill: {
+    width: 36,
+    height: 5,
+    borderRadius: BorderRadius.full,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
   },
+  filterCountBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xs,
+  },
+  filterCountText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   closeButton: {
-    padding: Spacing.xs,
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    gap: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xl + Spacing.lg,
+    gap: Spacing.xl,
   },
   sectionCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
     gap: Spacing.md,
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   sectionBadge: {
     borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    minWidth: 28,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 3,
+    minWidth: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionDescription: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: Spacing.xs,
   },
   tagsGrid: {
     flexDirection: 'row',
@@ -272,49 +365,74 @@ const styles = StyleSheet.create({
   filterOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.md + 2,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    minHeight: 44,
-    gap: Spacing.md,
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    minHeight: 40,
+    gap: Spacing.xs,
+  },
+  filterIcon: {
+    width: 20,
+    height: 20,
   },
   filterOptionText: {
     fontSize: 14,
-    fontWeight: '500',
+  },
+  mealTypesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  mealTypeCard: {
+    width: '30%',
+    aspectRatio: 1,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  mealTypeIcon: {
+    width: 40,
+    height: 40,
+  },
+  mealTypeText: {
+    fontSize: 13,
+    textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    gap: Spacing.md,
+    paddingBottom: Spacing.lg,
+    gap: Spacing.sm,
     borderTopWidth: 1,
   },
   primaryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flex: 1,
+    paddingVertical: Spacing.md + 2,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
   secondaryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

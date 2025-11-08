@@ -11,11 +11,13 @@ import { ToastNotification } from '@/components/ui/ToastNotification';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Settings, Star, User } from 'lucide-react-native';
+import { Camera, ChevronRight, Settings, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +30,7 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { user, logout, profile, refreshProfile, isPremium } = useAuthContext();
+  const { uploadAvatar, isUploading } = useAvatarUpload();
   const [showSettings, setShowSettings] = useState(false);
   const [showFriendsSheet, setShowFriendsSheet] = useState(false);
   const [showAddFriendSheet, setShowAddFriendSheet] = useState(false);
@@ -68,6 +71,15 @@ export default function ProfileScreen() {
     setShowToast(true);
   };
 
+  const handleAvatarPress = () => {
+    try {
+      console.log('👆 [Profile] Appui sur avatar');
+      uploadAvatar();
+    } catch (error) {
+      console.error('❌ [Profile] Erreur lors de l\'appel uploadAvatar:', error);
+    }
+  };
+
 
   return (
     <ScrollView
@@ -85,17 +97,33 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <View style={styles.avatarWrapper}>
-          <View style={[styles.avatarContainer, { backgroundColor: avatarUrl ? 'transparent' : colors.primary }]}>
-            {avatarUrl ? (
-              <ExpoImage
-                source={{ uri: avatarUrl }}
-                style={styles.avatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <User size={48} color="#FFFFFF" />
-            )}
-          </View>
+          <TouchableOpacity
+            onPress={handleAvatarPress}
+            disabled={isUploading}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.avatarContainer, { backgroundColor: avatarUrl ? 'transparent' : colors.primary }]}>
+              {avatarUrl ? (
+                <ExpoImage
+                  source={{ uri: avatarUrl }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <User size={48} color="#FFFFFF" />
+              )}
+              {/* Overlay avec spinner lors de l'upload */}
+              {isUploading && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+            </View>
+            {/* Badge caméra pour indiquer qu'on peut changer la photo */}
+            <View style={[styles.cameraBadge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+              <Camera size={14} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
           {isPremium && (
             <View style={[styles.premiumBadge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
               <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
@@ -264,9 +292,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
   },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+  },
   avatarImage: {
     width: '100%',
     height: '100%',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.full,
   },
   name: {
     fontSize: 28,

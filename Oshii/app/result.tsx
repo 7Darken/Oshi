@@ -769,15 +769,21 @@ export default function ResultScreen() {
       >
         {/* Container avec tout le contenu */}
         <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
-          {/* Logo TikTok */}
+          {/* Logo Platform (Instagram, TikTok, YouTube) */}
           {'source_url' in recipe && recipe.source_url && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.tiktokLogoContainer}
               onPress={handleOpenSource}
               activeOpacity={0.7}
             >
               <ExpoImage
-                source={require('@/assets/logo/Tiktoklogo.jpg')}
+                source={
+                  'platform' in recipe && recipe.platform === 'Instagram'
+                    ? require('@/assets/logo/InstagramLogo.png')
+                    : 'platform' in recipe && recipe.platform === 'YouTube'
+                    ? require('@/assets/logo/YoutubeLogo.png')
+                    : require('@/assets/logo/Tiktoklogo.jpg')
+                }
                 style={styles.tiktokLogo}
                 contentFit="contain"
                 transition={200}

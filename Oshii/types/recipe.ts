@@ -40,6 +40,7 @@ export interface Recipe {
   fats?: number | null;
   calories?: number | null;
   equipment?: string[] | null;
+  platform?: 'Tiktok' | 'Instagram' | 'YouTube' | null;
   created_at?: string;
   nutrition?: {
     calories: number;
@@ -66,6 +67,7 @@ export interface DatabaseRecipe {
   carbs: number | null;
   fats: number | null;
   equipment: string[] | null;
+  platform?: 'Tiktok' | 'Instagram' | 'YouTube' | null;
   meal_type?: string | null;
   diet_type?: string[] | null;
 }
