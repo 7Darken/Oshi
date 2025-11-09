@@ -28,6 +28,7 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useProfileTranslation } from '@/hooks/useI18n';
 import { useFriends } from '@/hooks/useFriends';
 import { FriendRequestWithProfile } from '@/types/friends';
 
@@ -41,6 +42,7 @@ type Tab = 'all' | 'received' | 'sent';
 export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useProfileTranslation();
   const {
     friends,
     pendingRequests,
@@ -61,9 +63,9 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
     setProcessingId(requestId);
     const result = await acceptFriendRequest(requestId);
     if (result.success) {
-      Alert.alert('✅ Demande acceptée', 'Vous êtes maintenant amis !');
+      Alert.alert(t('profile.friends.alerts.requestAccepted'), t('profile.friends.alerts.nowFriends'));
     } else {
-      Alert.alert('Erreur', result.error || 'Une erreur est survenue');
+      Alert.alert(t('profile.friends.alerts.error'), result.error || t('profile.friends.alerts.genericError'));
     }
     setProcessingId(null);
   };
@@ -72,7 +74,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
     setProcessingId(requestId);
     const result = await declineFriendRequest(requestId);
     if (!result.success) {
-      Alert.alert('Erreur', result.error || 'Une erreur est survenue');
+      Alert.alert(t('profile.friends.alerts.error'), result.error || t('profile.friends.alerts.genericError'));
     }
     setProcessingId(null);
   };
@@ -81,25 +83,25 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
     setProcessingId(requestId);
     const result = await cancelFriendRequest(requestId);
     if (!result.success) {
-      Alert.alert('Erreur', result.error || 'Une erreur est survenue');
+      Alert.alert(t('profile.friends.alerts.error'), result.error || t('profile.friends.alerts.genericError'));
     }
     setProcessingId(null);
   };
 
   const handleRemoveFriend = async (friendshipId: string, username: string) => {
     Alert.alert(
-      'Retirer cet ami',
-      `Êtes-vous sûr de vouloir retirer @${username} de vos amis ?`,
+      t('profile.friends.alerts.removeFriendTitle'),
+      t('profile.friends.alerts.removeFriendMessage', { username }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('profile.friends.actions.cancel'), style: 'cancel' },
         {
-          text: 'Retirer',
+          text: t('profile.friends.alerts.remove'),
           style: 'destructive',
           onPress: async () => {
             setProcessingId(friendshipId);
             const result = await removeFriend(friendshipId);
             if (!result.success) {
-              Alert.alert('Erreur', result.error || 'Une erreur est survenue');
+              Alert.alert(t('profile.friends.alerts.error'), result.error || t('profile.friends.alerts.genericError'));
             }
             setProcessingId(null);
           },
@@ -126,9 +128,9 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
             <ArrowLeft size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Mes amis</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile.friends.title')}</Text>
             <Text style={[styles.headerSubtitle, { color: colors.icon }]}>
-              {totalFriends} {totalFriends === 1 ? 'ami' : 'amis'}
+              {t('profile.friends.friendCount', { count: totalFriends })}
             </Text>
           </View>
           <View style={styles.closeButton} />
@@ -152,7 +154,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   { color: activeTab === 'all' ? '#FFFFFF' : colors.icon },
                 ]}
               >
-                Tous
+                {t('profile.friends.tabs.all')}
               </Text>
             </TouchableOpacity>
 
@@ -171,7 +173,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   { color: activeTab === 'received' ? '#FFFFFF' : colors.icon },
                 ]}
               >
-                Reçues
+                {t('profile.friends.tabs.received')}
               </Text>
               {pendingRequests.length > 0 && (
                 <View style={styles.badge}>
@@ -195,7 +197,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   { color: activeTab === 'sent' ? '#FFFFFF' : colors.icon },
                 ]}
               >
-                Envoyées
+                {t('profile.friends.tabs.sent')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -211,7 +213,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.icon }]}>
-                Chargement...
+                {t('profile.friends.loading')}
               </Text>
             </View>
           ) : (
@@ -222,8 +224,8 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   {totalFriends === 0 ? (
                     <EmptyState
                       icon={Users}
-                      title="Aucun ami"
-                      subtitle="Commencez à ajouter des amis pour partager vos meilleures recettes"
+                      title={t('profile.friends.empty.noFriends')}
+                      subtitle={t('profile.friends.empty.noFriendsSubtitle')}
                       colors={colors}
                     />
                   ) : (
@@ -232,7 +234,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                       {pendingRequests.length > 0 && (
                         <View style={styles.section}>
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                            Demandes reçues
+                            {t('profile.friends.sections.receivedRequests')}
                           </Text>
                           {pendingRequests.map((request) => (
                             <ReceivedRequestItem
@@ -251,7 +253,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                       {friends.length > 0 && (
                         <View style={styles.section}>
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                            Amis ({friends.length})
+                            {t('profile.friends.sections.friends', { count: friends.length })}
                           </Text>
                           {friends.map((friendship) => (
                             <FriendItem
@@ -271,7 +273,7 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                       {sentRequests.length > 0 && (
                         <View style={styles.section}>
                           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                            En attente ({sentRequests.length})
+                            {t('profile.friends.sections.pending', { count: sentRequests.length })}
                           </Text>
                           {sentRequests.map((request) => (
                             <SentRequestItem
@@ -295,8 +297,8 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   {pendingRequests.length === 0 ? (
                     <EmptyState
                       icon={UserPlus}
-                      title="Aucune demande"
-                      subtitle="Vous n'avez pas de demande d'ami en attente"
+                      title={t('profile.friends.empty.noRequests')}
+                      subtitle={t('profile.friends.empty.noRequestsSubtitle')}
                       colors={colors}
                     />
                   ) : (
@@ -320,8 +322,8 @@ export function FriendsSheetNative({ visible, onClose }: FriendsSheetNativeProps
                   {sentRequests.length === 0 ? (
                     <EmptyState
                       icon={Clock}
-                      title="Aucune demande envoyée"
-                      subtitle="Vos demandes d'amis en attente apparaîtront ici"
+                      title={t('profile.friends.empty.noSentRequests')}
+                      subtitle={t('profile.friends.empty.noSentRequestsSubtitle')}
                       colors={colors}
                     />
                   ) : (
@@ -354,6 +356,7 @@ interface FriendItemProps {
 }
 
 function FriendItem({ friendship, colors, onRemove, isProcessing }: FriendItemProps) {
+  const { t } = useProfileTranslation();
   const friend = friendship.friend;
 
   return (
@@ -376,9 +379,9 @@ function FriendItem({ friendship, colors, onRemove, isProcessing }: FriendItemPr
       </View>
       <View style={styles.itemInfo}>
         <Text style={[styles.itemName, { color: colors.text }]}>
-          @{friend?.username || 'Utilisateur'}
+          @{friend?.username || t('profile.friends.defaultUser')}
         </Text>
-        <Text style={[styles.itemSubtext, { color: colors.icon }]}>Ami</Text>
+        <Text style={[styles.itemSubtext, { color: colors.icon }]}>{t('profile.friends.statusFriend')}</Text>
       </View>
       <TouchableOpacity
         style={[styles.iconButton, { borderColor: colors.border }]}
@@ -411,6 +414,7 @@ function ReceivedRequestItem({
   onDecline,
   isProcessing,
 }: ReceivedRequestItemProps) {
+  const { t } = useProfileTranslation();
   const user = request.sender;
 
   return (
@@ -433,9 +437,9 @@ function ReceivedRequestItem({
       </View>
       <View style={styles.itemInfo}>
         <Text style={[styles.itemName, { color: colors.text }]}>
-          @{user?.username || 'Utilisateur'}
+          @{user?.username || t('profile.friends.defaultUser')}
         </Text>
-        <Text style={[styles.itemSubtext, { color: colors.primary }]}>Demande d'ami</Text>
+        <Text style={[styles.itemSubtext, { color: colors.primary }]}>{t('profile.friends.statusFriendRequest')}</Text>
       </View>
       <View style={styles.actions}>
         <TouchableOpacity
@@ -474,6 +478,7 @@ interface SentRequestItemProps {
 }
 
 function SentRequestItem({ request, colors, onCancel, isProcessing }: SentRequestItemProps) {
+  const { t } = useProfileTranslation();
   const user = request.receiver;
 
   return (
@@ -496,9 +501,9 @@ function SentRequestItem({ request, colors, onCancel, isProcessing }: SentReques
       </View>
       <View style={styles.itemInfo}>
         <Text style={[styles.itemName, { color: colors.text }]}>
-          @{user?.username || 'Utilisateur'}
+          @{user?.username || t('profile.friends.defaultUser')}
         </Text>
-        <Text style={[styles.itemSubtext, { color: colors.icon }]}>En attente</Text>
+        <Text style={[styles.itemSubtext, { color: colors.icon }]}>{t('profile.friends.statusPending')}</Text>
       </View>
       <TouchableOpacity
         style={[styles.cancelButtonOutline, { borderColor: colors.border }]}
@@ -508,7 +513,7 @@ function SentRequestItem({ request, colors, onCancel, isProcessing }: SentReques
         {isProcessing ? (
           <ActivityIndicator size="small" color={colors.icon} />
         ) : (
-          <Text style={[styles.cancelButtonText, { color: colors.icon }]}>Annuler</Text>
+          <Text style={[styles.cancelButtonText, { color: colors.icon }]}>{t('profile.friends.actions.cancel')}</Text>
         )}
       </TouchableOpacity>
     </View>

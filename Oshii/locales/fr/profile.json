@@ -1,0 +1,84 @@
+{
+  "profile": {
+    "defaultUsername": "Chef",
+    "profileTypes": {
+      "survivaliste": "Survivaliste",
+      "cuisinier": "Cuisinier",
+      "sportif": "Sportif",
+      "default": "Passionné de cuisine"
+    },
+    "friendRequestSent": "Demande envoyée à @{{username}}",
+    "friends": {
+      "title": "Mes amis",
+      "friendCount": "{{count}} ami",
+      "friendCount_plural": "{{count}} amis",
+      "requestCount": "{{count}} demande",
+      "requestCount_plural": "{{count}} demandes",
+      "pendingCount": "{{count}} en attente",
+      "noFriendsYet": "Vous n'avez pas encore d'amis",
+      "addFriendsToShare": "Ajoutez des amis pour partager vos recettes",
+      "seeAllFriends": "Voir tous les amis ({{count}})",
+      "manageFriends": "Gérer mes amis",
+      "defaultUser": "Utilisateur",
+      "statusPending": "En attente",
+      "statusFriendRequest": "Demande d'ami",
+      "statusFriend": "Ami",
+      "loading": "Chargement...",
+      "tabs": {
+        "all": "Tous",
+        "received": "Reçues",
+        "sent": "Envoyées"
+      },
+      "empty": {
+        "noFriends": "Aucun ami",
+        "noFriendsSubtitle": "Commencez à ajouter des amis pour partager vos meilleures recettes",
+        "noRequests": "Aucune demande",
+        "noRequestsSubtitle": "Vous n'avez pas de demande d'ami en attente",
+        "noSentRequests": "Aucune demande envoyée",
+        "noSentRequestsSubtitle": "Vos demandes d'amis en attente apparaîtront ici"
+      },
+      "sections": {
+        "receivedRequests": "Demandes reçues",
+        "friends": "Amis ({{count}})",
+        "pending": "En attente ({{count}})"
+      },
+      "actions": {
+        "cancel": "Annuler"
+      },
+      "alerts": {
+        "requestAccepted": "✅ Demande acceptée",
+        "nowFriends": "Vous êtes maintenant amis !",
+        "error": "Erreur",
+        "genericError": "Une erreur est survenue",
+        "removeFriendTitle": "Retirer cet ami",
+        "removeFriendMessage": "Êtes-vous sûr de vouloir retirer @{{username}} de vos amis ?",
+        "remove": "Retirer"
+      },
+      "addFriend": {
+        "title": "Ajouter un ami",
+        "searchPlaceholder": "Nom d'utilisateur...",
+        "searchDescription": "Recherchez un ami par son nom d'utilisateur",
+        "buttonAdd": "Ajouter",
+        "errorEmptyUsername": "Veuillez saisir un nom d'utilisateur",
+        "errorNotFound": "Utilisateur @{{username}} introuvable",
+        "errorAlreadyFriend": "Vous êtes déjà ami avec @{{username}}",
+        "errorAlreadySent": "Demande déjà envoyée à @{{username}}",
+        "errorAlreadyReceived": "@{{username}} vous a déjà envoyé une demande"
+      }
+    },
+    "premium": {
+      "upgrade": "Passer à Oshii Pro",
+      "unlockFeatures": "Débloquez toutes les fonctionnalités",
+      "title": "Oshii Pro",
+      "features": {
+        "unlimitedGenerations": "Générations illimitées",
+        "customRecipes": "Recettes personnalisées",
+        "prioritySupport": "Support prioritaire"
+      }
+    },
+    "footer": {
+      "version": "Oshii v{{version}}",
+      "tagline": "Vos recettes, simplifiées"
+    }
+  }
+}

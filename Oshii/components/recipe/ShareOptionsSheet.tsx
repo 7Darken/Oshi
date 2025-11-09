@@ -14,6 +14,7 @@ import { Image, Users } from 'lucide-react-native';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 
 interface ShareOptionsSheetProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export function ShareOptionsSheet({
 }: ShareOptionsSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
 
   const handleExportImage = () => {
     onClose();
@@ -46,9 +48,11 @@ export function ShareOptionsSheet({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Partager</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {t('recipe.share.options.title')}
+          </Text>
           <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Choisissez comment partager cette recette
+            {t('recipe.share.options.subtitle')}
           </Text>
         </View>
 
@@ -65,10 +69,10 @@ export function ShareOptionsSheet({
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={[styles.optionTitle, { color: colors.text }]}>
-                Exporter en image
+                {t('recipe.share.options.exportImage')}
               </Text>
               <Text style={[styles.optionDescription, { color: colors.icon }]}>
-                Générer une image à partager sur les réseaux
+                {t('recipe.share.options.exportImageDescription')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -84,10 +88,10 @@ export function ShareOptionsSheet({
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={[styles.optionTitle, { color: colors.text }]}>
-                Partager à un ami
+                {t('recipe.share.options.shareToFriend')}
               </Text>
               <Text style={[styles.optionDescription, { color: colors.icon }]}>
-                Envoyer cette recette à vos amis
+                {t('recipe.share.options.shareToFriendDescription')}
               </Text>
             </View>
           </TouchableOpacity>

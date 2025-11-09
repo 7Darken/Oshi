@@ -3,13 +3,15 @@
  * Première page de l'app avec options de connexion
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Mail } from 'lucide-react-native';
@@ -17,16 +19,17 @@ import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useState } from 'react';
-import { ActivityIndicator, Alert } from 'react-native';
+import { useAuthTranslation, useCommonTranslation } from '@/hooks/useI18n';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signInWithGoogle, signInWithApple, isLoading } = useAuthContext();
+  const { signInWithGoogle, signInWithApple } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const { t } = useAuthTranslation();
+  const { t: tCommon } = useCommonTranslation();
 
   const handleEmailLogin = () => {
     router.push('/login');
@@ -40,8 +43,8 @@ export default function WelcomeScreen() {
       if (result.error) {
         setIsGoogleLoading(false);
         Alert.alert(
-          'Erreur',
-          result.error.message || 'Une erreur est survenue lors de la connexion avec Google'
+          tCommon('common.error'),
+          result.error.message || t('loginErrorWithProvider', { provider: t('providers.google') })
         );
         return;
       }
@@ -67,8 +70,8 @@ export default function WelcomeScreen() {
     } catch (error: any) {
       setIsGoogleLoading(false);
       Alert.alert(
-        'Erreur',
-        error.message || 'Une erreur est survenue lors de la connexion avec Google'
+        tCommon('common.error'),
+        error.message || t('loginErrorWithProvider', { provider: t('providers.google') })
       );
     }
     // Ne pas mettre setIsGoogleLoading(false) ici car la navigation peut prendre du temps
@@ -88,8 +91,8 @@ export default function WelcomeScreen() {
       if (result.error) {
         setIsAppleLoading(false);
         Alert.alert(
-          'Erreur',
-          result.error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+          tCommon('common.error'),
+          result.error.message || t('loginErrorWithProvider', { provider: t('providers.apple') })
         );
         return;
       }
@@ -105,8 +108,8 @@ export default function WelcomeScreen() {
     } catch (error: any) {
       setIsAppleLoading(false);
       Alert.alert(
-        'Erreur',
-        error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+        tCommon('common.error'),
+        error.message || t('loginErrorWithProvider', { provider: t('providers.apple') })
       );
     }
     // Ne pas mettre setIsAppleLoading(false) ici car la navigation peut prendre du temps
@@ -127,7 +130,7 @@ export default function WelcomeScreen() {
         />
         <Text style={[styles.appName, { color: colors.text }]}>Oshii</Text>
         <Text style={[styles.description, { color: colors.icon }]}>
-          Transforme tes vidéos préférées en recettes
+          {t('welcomeHeadline')}
         </Text>
       </View>
 
@@ -141,7 +144,7 @@ export default function WelcomeScreen() {
         >
           <Mail size={20} color={colors.text} />
           <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            Continuer avec <Text style={styles.loginButtonBold}>Email</Text>
+            {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.email')}</Text>
           </Text>
         </TouchableOpacity>
 
@@ -166,8 +169,10 @@ export default function WelcomeScreen() {
             />
           )}
           <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            {isGoogleLoading ? 'Connexion...' : (
-              <>Continuer avec <Text style={styles.loginButtonBold}>Google</Text></>
+            {isGoogleLoading ? t('connecting') : (
+              <>
+                {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.google')}</Text>
+              </>
             )}
           </Text>
         </TouchableOpacity>
@@ -199,8 +204,10 @@ export default function WelcomeScreen() {
             styles.loginButtonText,
             { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
           ]}>
-            {isAppleLoading ? 'Connexion...' : (
-              <>Continuer avec <Text style={styles.loginButtonBold}>Apple</Text></>
+            {isAppleLoading ? t('connecting') : (
+              <>
+                {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.apple')}</Text>
+              </>
             )}
           </Text>
         </TouchableOpacity>

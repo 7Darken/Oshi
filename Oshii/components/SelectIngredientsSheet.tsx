@@ -16,6 +16,7 @@ import { X, Check } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 
 export interface IngredientItem {
   name: string;
@@ -41,6 +42,7 @@ export function SelectIngredientsSheet({
 }: SelectIngredientsSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
   const toggleIngredient = (index: number) => {
@@ -86,7 +88,7 @@ export function SelectIngredientsSheet({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Ajouter à la liste de courses
+            {t('recipe.selectIngredients.title')}
           </Text>
           <Pressable
             onPress={onClose}
@@ -172,7 +174,10 @@ export function SelectIngredientsSheet({
             activeOpacity={0.8}
           >
             <Text style={styles.confirmButtonText}>
-              {isAdding ? 'Ajout en cours...' : `Ajouter ${selectedIndices.size} ${selectedIndices.size === 1 ? 'ingrédient' : 'ingrédients'}`}
+              {isAdding
+                ? t('recipe.selectIngredients.adding')
+                : t('recipe.selectIngredients.addButton', { count: selectedIndices.size })
+              }
             </Text>
           </TouchableOpacity>
         </View>

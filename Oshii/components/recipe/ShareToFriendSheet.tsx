@@ -18,6 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFriends } from '@/hooks/useFriends';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 
 interface ShareToFriendSheetProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export function ShareToFriendSheet({
 }: ShareToFriendSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   const { friends, isLoading } = useFriends();
   const [selectedFriendshipId, setSelectedFriendshipId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -64,7 +66,7 @@ export function ShareToFriendSheet({
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={[styles.title, { color: colors.text }]}>
-            Partager à un ami
+            {t('recipe.share.toFriend.title')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -74,7 +76,7 @@ export function ShareToFriendSheet({
         {/* Description */}
         <View style={styles.descriptionContainer}>
           <Text style={[styles.description, { color: colors.icon }]}>
-            Sélectionnez un ami pour partager cette recette
+            {t('recipe.share.toFriend.description')}
           </Text>
         </View>
 
@@ -91,10 +93,10 @@ export function ShareToFriendSheet({
           ) : friends.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.icon }]}>
-                Vous n'avez pas encore d'amis
+                {t('recipe.share.toFriend.noFriends')}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-                Ajoutez des amis pour partager vos recettes
+                {t('recipe.share.toFriend.noFriendsSubtext')}
               </Text>
             </View>
           ) : (
@@ -137,7 +139,7 @@ export function ShareToFriendSheet({
                     )}
                   </View>
                   <Text style={[styles.friendName, { color: colors.text }]}>
-                    @{friend?.username || 'Utilisateur'}
+                    @{friend?.username || t('recipe.share.toFriend.defaultUser')}
                   </Text>
                   {isSelected && (
                     <View
@@ -167,7 +169,7 @@ export function ShareToFriendSheet({
                   color: colors.text,
                 },
               ]}
-              placeholder="Ajouter un message (optionnel)"
+              placeholder={t('recipe.share.toFriend.messagePlaceholder')}
               placeholderTextColor={colors.icon}
               value={message}
               onChangeText={setMessage}
@@ -195,7 +197,9 @@ export function ShareToFriendSheet({
               ) : (
                 <>
                   <Send size={20} color="#FFFFFF" />
-                  <Text style={styles.sendButtonText}>Envoyer</Text>
+                  <Text style={styles.sendButtonText}>
+                    {t('recipe.share.toFriend.send')}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

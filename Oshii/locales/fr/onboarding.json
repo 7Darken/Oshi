@@ -1,0 +1,38 @@
+{
+  "step1": {
+    "title": "Quel est votre prénom ?",
+    "description": "Nous l'utilisons pour personnaliser votre expérience",
+    "placeholder": "Votre prénom"
+  },
+  "step2": {
+    "title": "Quel est votre profil ?",
+    "description": "Cela nous aide à vous proposer des recettes adaptées",
+    "profileTypes": {
+      "survivaliste": {
+        "label": "Survivaliste",
+        "description": "Recettes simples et efficaces"
+      },
+      "cuisinier": {
+        "label": "Cuisinier",
+        "description": "Passion pour la gastronomie"
+      },
+      "sportif": {
+        "label": "Sportif",
+        "description": "Alimentation équilibrée et healthy"
+      }
+    }
+  },
+  "step3": {
+    "title": "Transforme tes vidéos",
+    "description": "Apprenez à utiliser l'application en quelques étapes"
+  },
+  "buttons": {
+    "back": "Retour",
+    "next": "Suivant",
+    "finish": "C'est parti !"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "usernameTaken": "Ce prénom est déjà pris"
+  }
+}

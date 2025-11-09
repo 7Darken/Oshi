@@ -6,6 +6,7 @@
 import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -18,11 +19,11 @@ import {
 } from 'react-native';
 
 export type AnalyzeStage =
-  | 'Téléchargement'
-  | 'Transcription'
-  | 'Extraction'
-  | 'Normalisation'
-  | 'Finalisation';
+  | 'download'
+  | 'transcription'
+  | 'extraction'
+  | 'normalization'
+  | 'finalization';
 
 interface RecipeAnalyzeSkeletonProps {
   url?: string;
@@ -32,21 +33,22 @@ interface RecipeAnalyzeSkeletonProps {
 }
 
 const STAGES: AnalyzeStage[] = [
-  'Téléchargement',
-  'Transcription',
-  'Extraction',
-  'Normalisation',
-  'Finalisation',
+  'download',
+  'transcription',
+  'extraction',
+  'normalization',
+  'finalization',
 ];
 
 export function RecipeAnalyzeSkeleton({
   url,
   onCancel,
-  stage = 'Téléchargement',
+  stage = 'download',
   estimatedTime = 30,
 }: RecipeAnalyzeSkeletonProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   
   // Animation shimmer
   const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -107,11 +109,16 @@ export function RecipeAnalyzeSkeleton({
     );
   };
 
+  // Obtenir le sous-titre en fonction du stage
+  const getSubtitle = () => {
+    return t(`recipe.analysis.skeleton.subtitles.${stage}`);
+  };
+
   return (
     <View
       style={[styles.container, { backgroundColor: colors.background }]}
       accessible
-      accessibilityLabel="Analyse de la recette en cours"
+      accessibilityLabel={t('recipe.analysis.skeleton.analyzingMessage')}
     >
       {/* En-tête */}
       <View style={styles.header}>
@@ -119,14 +126,10 @@ export function RecipeAnalyzeSkeleton({
           <OshiiLogo size="lg" />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>
-          On analyse la recette…
+          {t('recipe.analysis.skeleton.analyzingMessage')}
         </Text>
         <Text style={[styles.subtitle, { color: colors.icon }]}>
-          {stage === 'Téléchargement' 
-            ? 'Téléchargement de la vidéo en cours...'
-            : stage === 'Transcription'
-            ? 'Transcription audio en cours...'
-            : 'Analyse de la recette en cours...'}
+          {getSubtitle()}
         </Text>
       </View>
 
@@ -217,7 +220,7 @@ export function RecipeAnalyzeSkeleton({
 
       {/* Indicateur temporel */}
       <Text style={[styles.timeIndicator, { color: colors.icon }]}>
-        Temps estimé : ~{estimatedTime}s
+        {t('recipe.analysis.skeleton.estimatedTime', { time: estimatedTime })}
       </Text>
 
       {/* Boutons d'action */}
@@ -239,7 +242,7 @@ export function RecipeAnalyzeSkeleton({
           onPress={onCancel}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Annuler l'analyse"
+          accessibilityLabel={t('recipe.analysis.skeleton.cancel')}
         >
           <X
             size={18}
@@ -252,7 +255,7 @@ export function RecipeAnalyzeSkeleton({
               { color: colorScheme === 'dark' ? '#ECEDEE' : colors.text },
             ]}
           >
-            Annuler
+            {t('recipe.analysis.skeleton.cancel')}
           </Text>
         </TouchableOpacity>
       </View>

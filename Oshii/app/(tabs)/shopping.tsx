@@ -17,6 +17,7 @@ import { ShoppingCart, Check, Plus } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useShoppingTranslation } from '@/hooks/useI18n';
 import { Card } from '@/components/ui/Card';
 import { SwipeableRow } from '@/components/ui/SwipeableRow';
 import { AddFoodItemsSheet } from '@/components/AddFoodItemsSheet';
@@ -30,6 +31,7 @@ export default function ShoppingScreen() {
   const [isAdding, setIsAdding] = React.useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useShoppingTranslation();
   const { items, isLoading, error, refresh, toggleItem, deleteItem, deleteAllCheckedItems, addFoodItems } = useShoppingList();
   const { getFoodItemImage } = useFoodItems();
 
@@ -47,15 +49,15 @@ export default function ShoppingScreen() {
 
   const handleDelete = (itemId: string) => {
     Alert.alert(
-      'Supprimer l\'article',
-      'Êtes-vous sûr de vouloir supprimer cet article de votre liste de courses ?',
+      t('shopping.deleteItem.title'),
+      t('shopping.deleteItem.message'),
       [
         {
-          text: 'Annuler',
+          text: t('shopping.deleteItem.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Supprimer',
+          text: t('shopping.deleteItem.confirm'),
           style: 'destructive',
           onPress: async () => await deleteItem(itemId),
         },
@@ -69,7 +71,7 @@ export default function ShoppingScreen() {
       await addFoodItems(selectedFoodItems.map(item => ({ id: item.id, name: item.name })));
       setShowAddSheet(false);
     } catch (err: any) {
-      Alert.alert('Erreur', 'Impossible d\'ajouter les ingrédients à la liste de courses');
+      Alert.alert(t('recipe.share.error'), t('shopping.addError'));
       console.error('❌ [Shopping] Erreur lors de l\'ajout:', err);
     } finally {
       setIsAdding(false);
@@ -78,21 +80,21 @@ export default function ShoppingScreen() {
 
   const handleDeleteAllChecked = () => {
     Alert.alert(
-      'Effacer tout',
-      `Êtes-vous sûr de vouloir supprimer les ${checkedItems.length} article(s) déjà acheté(s) ?`,
+      t('shopping.deleteAllChecked.title'),
+      t('shopping.deleteAllChecked.message', { count: checkedItems.length }),
       [
         {
-          text: 'Annuler',
+          text: t('shopping.deleteAllChecked.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Effacer',
+          text: t('shopping.deleteAllChecked.confirm'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteAllCheckedItems();
             } catch (err: any) {
-              Alert.alert('Erreur', 'Impossible de supprimer les articles');
+              Alert.alert(t('recipe.share.error'), t('shopping.deleteError'));
               console.error('❌ [Shopping] Erreur lors de la suppression:', err);
             }
           },
@@ -117,14 +119,14 @@ export default function ShoppingScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Liste de courses</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('shopping.title')}</Text>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowAddSheet(true)}
           activeOpacity={0.8}
         >
           <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
-          <Text style={styles.addButtonText}>Ajouter</Text>
+          <Text style={styles.addButtonText}>{t('shopping.addButton')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -133,7 +135,7 @@ export default function ShoppingScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.icon }]}>
-            Chargement de votre liste...
+            {t('shopping.loading')}
           </Text>
         </View>
       )}
@@ -150,10 +152,10 @@ export default function ShoppingScreen() {
         <View style={styles.centerContainer}>
           <ShoppingCart size={64} color={colors.icon} strokeWidth={1} />
           <Text style={[styles.emptyText, { color: colors.icon }]}>
-            Votre liste est vide
+            {t('shopping.emptyTitle')}
           </Text>
           <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-            Ajoutez des ingrédients depuis vos recettes
+            {t('shopping.emptySubtitle')}
           </Text>
         </View>
       )}
@@ -163,13 +165,13 @@ export default function ShoppingScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeaderFirst}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              À acheter ({uncheckedItems.length})
+              {t('shopping.toBuy', { count: uncheckedItems.length })}
             </Text>
           </View>
           {uncheckedItems.length === 0 ? (
             <View style={styles.emptySection}>
               <Text style={[styles.emptySectionText, { color: colors.icon }]}>
-                Aucun article à acheter
+                {t('shopping.nothingToBuy')}
               </Text>
             </View>
           ) : (
@@ -229,7 +231,7 @@ export default function ShoppingScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text, opacity: 0.6 }]}>
-              Déjà acheté ({checkedItems.length})
+              {t('shopping.alreadyBought', { count: checkedItems.length })}
             </Text>
             <TouchableOpacity
               onPress={handleDeleteAllChecked}
@@ -237,7 +239,7 @@ export default function ShoppingScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.clearAllText, { color: colors.primary }]}>
-                Effacer tout
+                {t('shopping.clearAll')}
               </Text>
             </TouchableOpacity>
           </View>

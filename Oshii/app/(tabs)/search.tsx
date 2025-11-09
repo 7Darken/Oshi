@@ -11,6 +11,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
 import { useSharedRecipeIds } from '@/hooks/useSharedRecipeIds';
+import { useSearchTranslation } from '@/hooks/useI18n';
 import { supabase } from '@/services/supabase';
 import { FoodItem } from '@/stores/useFoodItemsStore';
 import { Image as ExpoImage } from 'expo-image';
@@ -47,19 +48,23 @@ interface SearchRecipe {
   servings: number | null;
   meal_type: MealType | null;
   diet_type: DietType[] | null;
+  platform?: 'Tiktok' | 'Instagram' | 'YouTube' | null;
 }
 
 // Composant de carte de recette mémorisé pour éviter les re-renders inutiles
-const RecipeCard = React.memo(({ 
-  item, 
+const RecipeCard = React.memo(({
+  item,
   onPress
-}: { 
-  item: SearchRecipe; 
+}: {
+  item: SearchRecipe;
   onPress: (id: string) => void;
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
+
+  // Détecter si c'est un thumbnail YouTube pour appliquer le zoom
+  const isYoutubeThumbnail = item.platform === 'YouTube';
+
   return (
     <TouchableOpacity
       style={styles.recipeCard}
@@ -70,7 +75,9 @@ const RecipeCard = React.memo(({
         {item.image_url ? (
           <ExpoImage
             source={{ uri: item.image_url }}
-            style={styles.recipeImage}
+            style={[
+              styles.recipeImage,
+            ]}
             contentFit="cover"
           />
         ) : (
@@ -111,7 +118,8 @@ const RecipeCard = React.memo(({
     prevProps.item.title === nextProps.item.title &&
     prevProps.item.image_url === nextProps.item.image_url &&
     prevProps.item.total_time === nextProps.item.total_time &&
-    prevProps.item.servings === nextProps.item.servings
+    prevProps.item.servings === nextProps.item.servings &&
+    prevProps.item.platform === nextProps.item.platform
   );
 });
 
@@ -120,6 +128,7 @@ RecipeCard.displayName = 'RecipeCard';
 export default function SearchScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useSearchTranslation();
   const router = useRouter();
   const { user } = useAuthContext();
   const { isInitialized: foodItemsReady } = useFoodItems();
@@ -236,7 +245,7 @@ export default function SearchScreen() {
         if (newRecipeIds.length > 0) {
           const { data: newRecipesData, error: newRecipesError } = await supabase
             .from('recipes')
-            .select('id, title, image_url, total_time, servings, meal_type, diet_type')
+            .select('id, title, image_url, total_time, servings, meal_type, diet_type, platform')
             .eq('user_id', user.id)
             .in('id', newRecipeIds)
             .order('created_at', { ascending: false });
@@ -329,7 +338,7 @@ export default function SearchScreen() {
       try {
         let query = supabase
           .from('recipes')
-          .select('id, title, image_url, total_time, servings, meal_type, diet_type')
+          .select('id, title, image_url, total_time, servings, meal_type, diet_type, platform')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -432,7 +441,7 @@ export default function SearchScreen() {
           <View style={styles.header}>
           <View style={styles.headerTextWrapper}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Qu&apos;est ce qu&apos;on prépare ?
+              {t('search.title')}
             </Text>
           </View>
         </View>
@@ -444,7 +453,7 @@ export default function SearchScreen() {
               <SearchBarWithTags
                 selectedFoodItems={selectedFoodItems}
                 onFoodItemsChange={setSelectedFoodItems}
-                placeholder="Rechercher un ingrédient..."
+                placeholder={t('search.searchPlaceholder')}
               />
             </View>
             <TouchableOpacity
@@ -469,7 +478,7 @@ export default function SearchScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: colors.icon }]}>
-              Recherche en cours...
+              {t('search.searching')}
             </Text>
           </View>
         ) : memoizedRecipes.length > 0 ? (
@@ -491,7 +500,7 @@ export default function SearchScreen() {
           isLoadingRecent ? (
             <View style={styles.loadingContainer}>
               <Text style={[styles.loadingText, { color: colors.icon }]}>
-                Chargement des recettes récentes...
+                {t('search.loadingRecent')}
               </Text>
             </View>
           ) : memoizedRecentRecipes.length > 0 ? (
@@ -510,27 +519,33 @@ export default function SearchScreen() {
               initialNumToRender={4}
               ListHeaderComponent={() => (
                 <View style={styles.recentHeader}>
-                  <Text style={[styles.recentTitle, { color: colors.text }]}>Dernières recettes</Text>
-                  <Text style={[styles.recentSubtitle, { color: colors.icon }]}>Vos créations les plus récentes</Text>
+                  <Text style={[styles.recentTitle, { color: colors.text }]}>
+                    {t('search.recentTitle')}
+                  </Text>
+                  <Text style={[styles.recentSubtitle, { color: colors.icon }]}>
+                    {t('search.recentSubtitle')}
+                  </Text>
                 </View>
               )}
             />
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: colors.icon }]}>Aucune recette récente disponible</Text>
+              <Text style={[styles.emptyText, { color: colors.icon }]}>
+                {t('search.noRecentRecipes')}
+              </Text>
             </View>
           )
         ) : selectedFoodItems.length > 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: colors.icon }]}>
-              Aucune recette trouvée avec ces ingrédients
+              {t('search.noRecipesFound')}
             </Text>
           </View>
         ) : (
           <View style={styles.emptyContainer}>
             <Search size={48} color={colors.icon} />
-            <Text style={[styles.emptyText, { color: colors.icon }]}> 
-              Recherchez une recette par ingrédient
+            <Text style={[styles.emptyText, { color: colors.icon }]}>
+              {t('search.searchPrompt')}
             </Text>
           </View>
         )}
@@ -633,6 +648,9 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: BorderRadius.sm,
     borderTopRightRadius: BorderRadius.sm,
+  },
+  youtubeImageZoom: {
+    transform: [{ scale: 1.0 }],
   },
   noImageContainer: {
     alignItems: 'center',

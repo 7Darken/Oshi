@@ -6,6 +6,7 @@
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFriends } from '@/hooks/useFriends';
+import { useProfileTranslation } from '@/hooks/useI18n';
 import { Image as ExpoImage } from 'expo-image';
 import { Check, ChevronRight, RefreshCw, UserCircle, UserPlus, Users, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -25,6 +26,7 @@ interface FriendsListCardProps {
 export function FriendsListCard({ onSeeAll, onAddFriend }: FriendsListCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useProfileTranslation();
   const {
     friends,
     isLoading,
@@ -97,12 +99,12 @@ export function FriendsListCard({ onSeeAll, onAddFriend }: FriendsListCardProps)
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={[styles.title, { color: colors.text }]}>
-              Mes amis
+              {t('profile.friends.title')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.icon }]}>
-              {friends.length} {friends.length > 1 ? 'amis' : 'ami'}
-              {pendingRequests.length > 0 && ` • ${pendingRequests.length} demande${pendingRequests.length > 1 ? 's' : ''}`}
-              {sentRequests.length > 0 && ` • ${sentRequests.length} en attente`}
+              {t('profile.friends.friendCount', { count: friends.length })}
+              {pendingRequests.length > 0 && ` • ${t('profile.friends.requestCount', { count: pendingRequests.length })}`}
+              {sentRequests.length > 0 && ` • ${t('profile.friends.pendingCount', { count: sentRequests.length })}`}
             </Text>
           </View>
         </View>
@@ -153,10 +155,10 @@ export function FriendsListCard({ onSeeAll, onAddFriend }: FriendsListCardProps)
       {!isLoading && totalCount === 0 && (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.icon }]}>
-            Vous n'avez pas encore d'amis
+            {t('profile.friends.noFriendsYet')}
           </Text>
           <Text style={[styles.emptySubtext, { color: colors.icon }]}>
-            Ajoutez des amis pour partager vos recettes
+            {t('profile.friends.addFriendsToShare')}
           </Text>
         </View>
       )}
@@ -187,7 +189,7 @@ export function FriendsListCard({ onSeeAll, onAddFriend }: FriendsListCardProps)
               activeOpacity={0.7}
             >
               <Text style={[styles.seeAllText, { color: colors.text }]}>
-                Voir tous les amis ({totalCount})
+                {t('profile.friends.seeAllFriends', { count: totalCount })}
               </Text>
               <ChevronRight size={18} color={colors.icon} />
             </TouchableOpacity>
@@ -201,7 +203,7 @@ export function FriendsListCard({ onSeeAll, onAddFriend }: FriendsListCardProps)
               activeOpacity={0.7}
             >
               <Text style={[styles.seeAllText, { color: colors.text }]}>
-                Gérer mes amis
+                {t('profile.friends.manageFriends')}
               </Text>
               <ChevronRight size={18} color={colors.icon} />
             </TouchableOpacity>
@@ -223,6 +225,7 @@ interface FriendPreviewItemProps {
 }
 
 function FriendPreviewItem({ friendship, colors, isPending, isReceived, onAccept, onDecline, isProcessing }: FriendPreviewItemProps) {
+  const { t } = useProfileTranslation();
   const friend = friendship.friend;
 
   return (
@@ -240,16 +243,16 @@ function FriendPreviewItem({ friendship, colors, isPending, isReceived, onAccept
       </View>
       <View style={styles.friendInfo}>
         <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-          {friend?.username || 'Utilisateur'}
+          {friend?.username || t('profile.friends.defaultUser')}
         </Text>
         {isPending && !isReceived && (
           <Text style={[styles.pendingLabel, { color: colors.icon }]}>
-            En attente
+            {t('profile.friends.statusPending')}
           </Text>
         )}
         {isReceived && (
           <Text style={[styles.receivedLabel, { color: colors.primary }]}>
-            Demande d'ami
+            {t('profile.friends.statusFriendRequest')}
           </Text>
         )}
       </View>

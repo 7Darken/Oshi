@@ -1,0 +1,16 @@
+{
+  "folders": {
+    "title": "Dossiers",
+    "createFolder": "Créer un dossier",
+    "folderName": "Nom du dossier",
+    "deleteFolder": "Supprimer le dossier",
+    "emptyFolder": "Ce dossier est vide",
+    "addRecipesToFolder": "Ajoutez des recettes à ce dossier pour les voir ici",
+    "unorganized": "Non enregistrés",
+    "received": "Envoyés",
+    "noRecipesReceived": "Aucune recette reçue",
+    "sharedRecipesAppearHere": "Les recettes partagées par vos amis apparaîtront ici",
+    "unorganizedRecipesAppearHere": "Vos recettes non classées apparaîtront ici",
+    "selectIcon": "Sélectionner une icône"
+  }
+}

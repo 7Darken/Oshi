@@ -69,6 +69,11 @@ export function RecipeCardPreview({
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
 
+  // Détecter si c'est un thumbnail YouTube pour appliquer le zoom
+  const isYoutubeThumbnail = useMemo(() => {
+    return recipe.platform === 'YouTube';
+  }, [recipe.platform]);
+
   const theme = useMemo<RecipePreviewTheme>(() => {
     const isDark = colorScheme === 'dark';
 
@@ -118,7 +123,10 @@ export function RecipeCardPreview({
           <View style={styles.coverContainer}>
             <ExpoImage
               source={{ uri: recipe.image_url }}
-              style={styles.coverImage}
+              style={[
+                styles.coverImage,
+                isYoutubeThumbnail && styles.youtubeImageZoom,
+              ]}
               contentFit="cover"
               transition={250}
             />
@@ -329,6 +337,9 @@ const createStyles = (theme: RecipePreviewTheme) =>
     coverImage: {
       width: '100%',
       height: '100%',
+    },
+    youtubeImageZoom: {
+      transform: [{ scale: 1.72 }],
     },
     coverOverlay: {
       ...StyleSheet.absoluteFillObject,

@@ -13,47 +13,53 @@ struct RecipeStepsWidget: Widget {
             // Lock screen/banner UI
             RecipeStepsLockScreenView(context: context)
         } dynamicIsland: { context in
-            DynamicIsland {
-                // Expanded region
+          DynamicIsland {
+                // Expanded region - Plus compact
                 DynamicIslandExpandedRegion(.leading) {
-                    Label {
-                        Text("\(context.state.currentStep)/\(context.state.totalSteps)")
-                    } icon: {
+                    HStack(spacing: 6) {
                         Image(systemName: "list.number")
                             .foregroundColor(.red)
+                            .font(.caption)
+
+            Text("\(context.state.currentStep)/\(context.state.totalSteps)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+
                     }
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let duration = context.state.stepDuration {
-                        Label {
-                            Text(duration)
-                        } icon: {
-                            Image(systemName: "clock.fill")
-                                .foregroundColor(.red)
+                    if let temp = context.state.stepTemperature {
+                        HStack(spacing: 4) {
+                            Image(systemName: "thermometer")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text(temp)
+                                .font(.caption)
+                                .fontWeight(.medium)
                         }
                     }
                 }
 
                 DynamicIslandExpandedRegion(.center) {
-                    Text(context.state.stepDescription)
-                        .font(.caption)
-                        .lineLimit(3)
-                }
+                    VStack(spacing: 4) {
+                        Text(context.state.stepDescription)
+                            .font(.callout)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
 
-                DynamicIslandExpandedRegion(.bottom) {
-                    HStack {
                         Text(context.attributes.recipeTitle)
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                        Spacer()
-                        if let temp = context.state.stepTemperature {
-                            Label(temp, systemImage: "thermometer")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                        }
                     }
-                    .padding(.horizontal)
+                    .padding(.top, 4)
+                }
+
+                DynamicIslandExpandedRegion(.bottom) {
+                    ProgressView(value: Double(context.state.currentStep), total:
+            Double(context.state.totalSteps))
+                        .tint(.red)
+                        .padding(.horizontal)
                 }
             } compactLeading: {
                 Image(systemName: "fork.knife")

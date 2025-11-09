@@ -1,0 +1,21 @@
+{
+  "search": {
+    "title": "What are we cooking?",
+    "searchPlaceholder": "Search for an ingredient...",
+    "searching": "Searching...",
+    "loadingRecent": "Loading recent recipes...",
+    "recentTitle": "Recent recipes",
+    "recentSubtitle": "Your latest creations",
+    "noRecentRecipes": "No recent recipes available",
+    "noRecipesFound": "No recipes found with these ingredients",
+    "searchPrompt": "Search for a recipe by ingredient",
+    "filters": {
+      "title": "Filters",
+      "mealType": "Meal type",
+      "dietType": "Diet type",
+      "reset": "Reset",
+      "showResults": "Show results ({{count}})",
+      "showAll": "Show all"
+    }
+  }
+}

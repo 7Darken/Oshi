@@ -19,6 +19,7 @@ import { X } from 'lucide-react-native';
 import * as LucideIcons from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCommonTranslation } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/Button';
 import { IconSelectorSheet } from '@/components/IconSelectorSheet';
 
@@ -47,6 +48,7 @@ export function CreateFolderSheet({
 }: CreateFolderSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useCommonTranslation();
   const [folderName, setFolderName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('cooking-pot');
   const [isCreating, setIsCreating] = useState(false);
@@ -68,7 +70,7 @@ export function CreateFolderSheet({
 
   const handleCreate = async () => {
     if (!folderName || folderName.trim().length === 0) {
-      setError('Veuillez entrer un nom de dossier');
+      setError(t('createFolder.errorEmpty'));
       return;
     }
 
@@ -82,7 +84,7 @@ export function CreateFolderSheet({
     if (success) {
       handleClose();
     } else {
-      setError('Erreur lors de la création du dossier');
+      setError(t('createFolder.errorCreate'));
     }
   };
 
@@ -141,7 +143,7 @@ export function CreateFolderSheet({
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Nom du dossier</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('createFolder.label')}</Text>
             <TextInput
               ref={inputRef}
               style={[
@@ -152,7 +154,7 @@ export function CreateFolderSheet({
                   color: colors.text,
                 },
               ]}
-              placeholder="Ex: Desserts, Pâtes, Salades..."
+              placeholder={t('createFolder.placeholder')}
               placeholderTextColor={colors.icon}
               value={folderName}
               onChangeText={(text) => {
@@ -168,7 +170,7 @@ export function CreateFolderSheet({
             />
             {error && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
             <Text style={[styles.hint, { color: colors.icon }]}>
-              Organisez vos recettes enregistrées dans des dossiers
+              {t('createFolder.hint')}
             </Text>
           </View>
         </ScrollView>
@@ -176,7 +178,7 @@ export function CreateFolderSheet({
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Button
-            title="Annuler"
+            title={t('common.cancel')}
             onPress={handleClose}
             variant="primary"
             style={[styles.button, { backgroundColor: colors.card }]}
@@ -184,7 +186,7 @@ export function CreateFolderSheet({
             disabled={isCreating}
           />
           <Button
-            title={isCreating ? 'Création...' : 'Créer'}
+            title={isCreating ? t('createFolder.creating') : t('createFolder.create')}
             onPress={handleCreate}
             variant="primary"
             style={[styles.button, styles.createButton]}

@@ -1,0 +1,38 @@
+{
+  "step1": {
+    "title": "What's your first name?",
+    "description": "We'll use it to personalize your experience",
+    "placeholder": "Your first name"
+  },
+  "step2": {
+    "title": "What's your profile?",
+    "description": "This helps us suggest the right recipes",
+    "profileTypes": {
+      "survivaliste": {
+        "label": "Survivalist",
+        "description": "Simple and efficient recipes"
+      },
+      "cuisinier": {
+        "label": "Chef",
+        "description": "Passion for gastronomy"
+      },
+      "sportif": {
+        "label": "Athlete",
+        "description": "Balanced and healthy meals"
+      }
+    }
+  },
+  "step3": {
+    "title": "Turn your videos into recipes",
+    "description": "Learn how to use the app in a few steps"
+  },
+  "buttons": {
+    "back": "Back",
+    "next": "Next",
+    "finish": "Let's go!"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "usernameTaken": "This name is already taken"
+  }
+}

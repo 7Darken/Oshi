@@ -1,0 +1,16 @@
+{
+  "folders": {
+    "title": "Folders",
+    "createFolder": "Create folder",
+    "folderName": "Folder name",
+    "deleteFolder": "Delete folder",
+    "emptyFolder": "This folder is empty",
+    "addRecipesToFolder": "Add recipes to this folder to see them here",
+    "unorganized": "Unorganized",
+    "received": "Received",
+    "noRecipesReceived": "No recipes received",
+    "sharedRecipesAppearHere": "Recipes shared by your friends will appear here",
+    "unorganizedRecipesAppearHere": "Your unorganized recipes will appear here",
+    "selectIcon": "Select an icon"
+  }
+}

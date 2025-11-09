@@ -18,6 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTutorialTranslation } from '@/hooks/useI18n';
 
 interface TutorialSheetProps {
   visible: boolean;
@@ -27,32 +28,33 @@ interface TutorialSheetProps {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_WIDTH = SCREEN_WIDTH * 0.7;
 
-const TUTORIAL_STEPS = [
-  {
-    id: 1,
-    image: require('@/assets/Tutorial/screen1.png'),
-    title: 'Étape 1',
-    description: 'Ouvrez TikTok et trouvez une vidéo de recette',
-  },
-  {
-    id: 2,
-    image: require('@/assets/Tutorial/screen2.png'),
-    title: 'Étape 2',
-    description: 'Appuyez sur "Partager" puis sélectionnez Oshii',
-  },
-  {
-    id: 3,
-    image: require('@/assets/Tutorial/screen3.png'),
-    title: 'Étape 3',
-    description: 'Oshii analyse la vidéo et crée votre recette automatiquement',
-  },
-];
-
 export function TutorialSheet({ visible, onClose }: TutorialSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useTutorialTranslation();
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const TUTORIAL_STEPS = [
+    {
+      id: 1,
+      image: require('@/assets/Tutorial/screen1.png'),
+      title: t('tutorial.steps.step1.title'),
+      description: t('tutorial.steps.step1.description'),
+    },
+    {
+      id: 2,
+      image: require('@/assets/Tutorial/screen2.png'),
+      title: t('tutorial.steps.step2.title'),
+      description: t('tutorial.steps.step2.description'),
+    },
+    {
+      id: 3,
+      image: require('@/assets/Tutorial/screen3.png'),
+      title: t('tutorial.steps.step3.title'),
+      description: t('tutorial.steps.step3.description'),
+    },
+  ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
@@ -72,7 +74,7 @@ export function TutorialSheet({ visible, onClose }: TutorialSheetProps) {
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Comment ça marche ?
+            {t('tutorial.title')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -82,7 +84,7 @@ export function TutorialSheet({ visible, onClose }: TutorialSheetProps) {
         {/* Content */}
         <View style={styles.content}>
           <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Transformez vos vidéos TikTok en recettes en 3 étapes simples
+            {t('tutorial.subtitle')}
           </Text>
 
           {/* Carousel horizontal */}
@@ -149,11 +151,10 @@ export function TutorialSheet({ visible, onClose }: TutorialSheetProps) {
           {/* Note finale */}
           <View style={[styles.noteContainer, { backgroundColor: colors.card }]}>
             <Text style={[styles.noteTitle, { color: colors.text }]}>
-              💡 Astuce
+              {t('tutorial.tip.title')}
             </Text>
             <Text style={[styles.noteText, { color: colors.icon }]}>
-              Vous pouvez partager des vidéos depuis TikTok, Instagram Reels, ou
-              YouTube Shorts. Oshii s&apos;occupe du reste !
+              {t('tutorial.tip.text')}
             </Text>
           </View>
         </View>

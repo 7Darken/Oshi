@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { AlertCircle, RotateCw, X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/Button';
 
 interface ErrorStateProps {
@@ -19,12 +20,13 @@ interface ErrorStateProps {
 export function ErrorState({ error, onRetry, onCancel }: ErrorStateProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
 
   return (
     <View
       style={[styles.container, { backgroundColor: colors.background }]}
       accessible
-      accessibilityLabel="Erreur lors de l'analyse"
+      accessibilityLabel={t('recipe.analysis.error.accessibilityLabel')}
     >
       <View style={styles.content}>
         <View
@@ -37,28 +39,27 @@ export function ErrorState({ error, onRetry, onCancel }: ErrorStateProps) {
         </View>
 
         <Text style={[styles.title, { color: colors.text }]}>
-          Oups — impossible d'analyser ce TikTok pour le moment.
+          {t('recipe.analysis.error.title')}
         </Text>
 
         <Text style={[styles.message, { color: colors.icon }]}>
-          {error || 'Vérifie ta connexion ou réessaie.'}
+          {error || t('recipe.analysis.error.defaultMessage')}
         </Text>
 
         <Text style={[styles.hint, { color: colors.icon }]}>
-          Si le problème persiste, copie le lien et colle-le sur l'écran
-          d'accueil.
+          {t('recipe.analysis.error.persistentHint')}
         </Text>
       </View>
 
       <View style={styles.actions}>
         <Button
-          title="Réessayer"
+          title={t('recipe.analysis.error.retry')}
           onPress={onRetry}
           variant="primary"
           style={styles.retryButton}
         />
         <Button
-          title="Annuler"
+          title={t('recipe.analysis.error.cancel')}
           onPress={onCancel}
           variant="outline"
         />

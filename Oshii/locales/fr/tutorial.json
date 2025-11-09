@@ -1,0 +1,24 @@
+{
+  "tutorial": {
+    "title": "Comment ça marche ?",
+    "subtitle": "Transformez vos vidéos TikTok en recettes en 3 étapes simples",
+    "steps": {
+      "step1": {
+        "title": "Étape 1",
+        "description": "Ouvrez TikTok et trouvez une vidéo de recette"
+      },
+      "step2": {
+        "title": "Étape 2",
+        "description": "Appuyez sur \"Partager\" puis sélectionnez Oshii"
+      },
+      "step3": {
+        "title": "Étape 3",
+        "description": "Oshii analyse la vidéo et crée votre recette automatiquement"
+      }
+    },
+    "tip": {
+      "title": "💡 Astuce",
+      "text": "Vous pouvez partager des vidéos depuis TikTok, Instagram Reels, ou YouTube Shorts. Oshii s'occupe du reste !"
+    }
+  }
+}

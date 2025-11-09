@@ -12,6 +12,7 @@ import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
+import { useProfileTranslation } from '@/hooks/useI18n';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Camera, ChevronRight, Settings, Star, User } from 'lucide-react-native';
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { t } = useProfileTranslation();
   const { user, logout, profile, refreshProfile, isPremium } = useAuthContext();
   const { uploadAvatar, isUploading } = useAvatarUpload();
   const [showSettings, setShowSettings] = useState(false);
@@ -46,13 +48,13 @@ export default function ProfileScreen() {
   const getProfileTypeLabel = (type: string | null): string => {
     switch (type) {
       case 'survivaliste':
-        return 'Survivaliste';
+        return t('profile.profileTypes.survivaliste');
       case 'cuisinier':
-        return 'Cuisinier';
+        return t('profile.profileTypes.cuisinier');
       case 'sportif':
-        return 'Sportif';
+        return t('profile.profileTypes.sportif');
       default:
-        return 'Passionné de cuisine';
+        return t('profile.profileTypes.default');
     }
   };
 
@@ -67,7 +69,7 @@ export default function ProfileScreen() {
   };
 
   const handleAddFriendSuccess = (username: string) => {
-    setToastMessage(`Demande envoyée à @${username}`);
+    setToastMessage(t('profile.friendRequestSent', { username }));
     setShowToast(true);
   };
 
@@ -79,7 +81,6 @@ export default function ProfileScreen() {
       console.error('❌ [Profile] Erreur lors de l\'appel uploadAvatar:', error);
     }
   };
-
 
   return (
     <ScrollView
@@ -124,15 +125,17 @@ export default function ProfileScreen() {
               <Camera size={14} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
+        </View>
+        <View style={styles.usernameContainer}>
+          <Text style={[styles.name, { color: colors.text }]}>
+           @{username || user?.email?.split('@')[0] || t('profile.defaultUsername')}
+          </Text>
           {isPremium && (
-            <View style={[styles.premiumBadge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-              <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+            <View style={[styles.premiumBadgeInline, { backgroundColor: colors.primary }]}>
+              <Star size={13} color="#FFFFFF" fill="#FFFFFF" />
             </View>
           )}
         </View>
-        <Text style={[styles.name, { color: colors.text }]}>
-         @{username || user?.email?.split('@')[0] || 'Chef'}
-        </Text>
         {profileType && (
           <View style={[styles.profileTypeTag, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <ProfileTypeIcon 
@@ -160,10 +163,10 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.premiumTextContainer}>
                 <Text style={[styles.premiumTitle, { color: colors.text }]}>
-                  Passer à Oshii Pro
+                  {t('profile.premium.upgrade')}
                 </Text>
                 <Text style={[styles.premiumSubtitle, { color: colors.icon }]}>
-                  Débloquez toutes les fonctionnalités
+                  {t('profile.premium.unlockFeatures')}
                 </Text>
               </View>
               <ChevronRight size={20} color={colors.icon} />
@@ -185,26 +188,26 @@ export default function ProfileScreen() {
                 <Star size={20} color={colors.primary} fill={colors.primary} />
               </View>
               <Text style={[styles.proTitle, { color: colors.text }]}>
-                Oshii Pro
+                {t('profile.premium.title')}
               </Text>
             </View>
             <View style={styles.proFeatures}>
               <View style={styles.proFeature}>
                 <View style={[styles.proFeatureDot, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.proFeatureText, { color: colors.icon }]}>
-                  Générations illimitées
+                  {t('profile.premium.features.unlimitedGenerations')}
                 </Text>
               </View>
               <View style={styles.proFeature}>
                 <View style={[styles.proFeatureDot, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.proFeatureText, { color: colors.icon }]}>
-                  Recettes personnalisées
+                  {t('profile.premium.features.customRecipes')}
                 </Text>
               </View>
               <View style={styles.proFeature}>
                 <View style={[styles.proFeatureDot, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.proFeatureText, { color: colors.icon }]}>
-                  Support prioritaire
+                  {t('profile.premium.features.prioritySupport')}
                 </Text>
               </View>
             </View>
@@ -213,10 +216,10 @@ export default function ProfileScreen() {
 
         <View style={styles.footer}>
           <Text style={[styles.version, { color: colors.icon }]}>
-            Oshii v1.0.0
+            {t('profile.footer.version', { version: '1.0.0' })}
           </Text>
           <Text style={[styles.tagline, { color: colors.icon }]}>
-            Vos recettes, simplifiées
+            {t('profile.footer.tagline')}
           </Text>
         </View>
       </View>
@@ -318,10 +321,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: BorderRadius.full,
   },
+  usernameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
   name: {
     fontSize: 28,
     fontWeight: '700',
-    marginBottom: Spacing.md,
+  },
+  premiumBadgeInline: {
+    width: 22,
+    height: 22,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
   profileTypeTag: {
     flexDirection: 'row',

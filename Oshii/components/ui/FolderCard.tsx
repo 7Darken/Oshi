@@ -8,6 +8,7 @@ import * as LucideIcons from 'lucide-react-native';
 import { MoreVertical, Lock } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCommonTranslation } from '@/hooks/useI18n';
 
 interface FolderCardProps {
   name: string;
@@ -59,6 +60,7 @@ export const FolderCard = React.memo(({
 }: FolderCardProps) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useCommonTranslation();
 
   // Mémoïser le calcul de la couleur pour éviter de recalculer à chaque render
   const folderColor = React.useMemo(() => getFolderColor(name), [name]);
@@ -102,7 +104,7 @@ export const FolderCard = React.memo(({
 
       {/* Nombre de recettes */}
       <Text style={[styles.recipeCount, { color: colors.icon }]}>
-        {recipeCount} {recipeCount === 1 ? 'recette' : 'recettes'}
+        {t('units.recipe', { count: recipeCount })}
       </Text>
     </TouchableOpacity>
   );

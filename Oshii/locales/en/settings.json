@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "title": "Settings",
+    "premium": "Premium Subscription",
+    "managePremium": "Manage subscription",
+    "email": "Email",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language",
+    "languageAuto": "Automatic",
+    "languageFrench": "Français",
+    "languageEnglish": "English",
+    "help": "Help",
+    "helpDescription": "How to transform your videos",
+    "about": "About",
+    "aboutDescription": "App information",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "logout": "Logout",
+    "deleteAccount": "Delete account",
+    "accountDeleted": "Account deleted",
+    "error": "Error",
+    "deleteError": "An error occurred while deleting your account. Please try again.",
+    "appleAccount": "Apple Account",
+    "notProvided": "Not provided",
+    "logoutButton": "Logout",
+    "deleteAccountButton": "Delete my account",
+    "logoutAlert": {
+      "title": "Logout",
+      "message": "Are you sure you want to logout? You'll need to sign in again to access your recipes.",
+      "cancel": "Cancel",
+      "confirm": "Yes, logout"
+    },
+    "deleteAlert": {
+      "title": "Delete my account",
+      "message": "Are you sure you want to permanently delete your account? This action will irreversibly delete all your data: your recipes, folders, shopping lists, and all information associated with your account. This action is irreversible and cannot be undone."
+    },
+    "tagline": "Your recipes, simplified",
+    "serviceUnavailable": "Service unavailable",
+    "subscriptionUnavailable": "Subscription management is not available at the moment. Please try again later.",
+    "subscriptionError": "Unable to open subscription management. Please try again later."
+  }
+}

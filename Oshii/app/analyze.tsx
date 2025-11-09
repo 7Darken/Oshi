@@ -23,7 +23,7 @@ export default function AnalyzeScreen() {
   const params = useLocalSearchParams<{ url?: string }>();
   const { analyzeLink, cancelAnalysis } = useAnalyzeLink();
   const { isLoading, error, currentRecipe, clearRecipe } = useRecipeStore();
-  const [currentStage, setCurrentStage] = useState<AnalyzeStage>('Téléchargement');
+  const [currentStage, setCurrentStage] = useState<AnalyzeStage>('download');
   const [analysisPromise, setAnalysisPromise] = useState<Promise<void> | null>(null);
 
   // Debug: Logger les changements d'état du store
@@ -165,7 +165,7 @@ export default function AnalyzeScreen() {
     }
 
     clearRecipe();
-    setCurrentStage('Transcription');
+    setCurrentStage('transcription');
 
     const promise = analyzeLink(url, {
       onProgress: (stage: AnalyzeStage) => {

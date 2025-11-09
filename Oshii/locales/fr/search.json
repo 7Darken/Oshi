@@ -1,0 +1,21 @@
+{
+  "search": {
+    "title": "Qu'est ce qu'on prépare ?",
+    "searchPlaceholder": "Rechercher un ingrédient...",
+    "searching": "Recherche en cours...",
+    "loadingRecent": "Chargement des recettes récentes...",
+    "recentTitle": "Dernières recettes",
+    "recentSubtitle": "Vos créations les plus récentes",
+    "noRecentRecipes": "Aucune recette récente disponible",
+    "noRecipesFound": "Aucune recette trouvée avec ces ingrédients",
+    "searchPrompt": "Recherchez une recette par ingrédient",
+    "filters": {
+      "title": "Filtres",
+      "mealType": "Type de repas",
+      "dietType": "Type de régime",
+      "reset": "Réinitialiser",
+      "showResults": "Afficher les résultats ({{count}})",
+      "showAll": "Afficher tout"
+    }
+  }
+}

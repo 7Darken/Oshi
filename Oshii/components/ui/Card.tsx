@@ -2,10 +2,10 @@
  * Composant Card - Carte stylisée selon le design Oshii
  */
 
-import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import React from 'react';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface CardProps {
   children: React.ReactNode;
@@ -24,7 +24,7 @@ export function Card({ children, style, padding = 'md' }: CardProps) {
         {
           backgroundColor: colors.card,
           padding: Spacing[padding],
-          borderRadius: BorderRadius.lg,
+          borderRadius: BorderRadius.sm,
         },
         style,
       ]}

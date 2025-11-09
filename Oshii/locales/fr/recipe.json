@@ -1,0 +1,134 @@
+{
+  "recipe": {
+    "title": "Recette",
+    "ingredients": "Ingrédients",
+    "steps": "Étapes",
+    "servings": "Portions",
+    "totalTime": "Temps total",
+    "prepTime": "Préparation",
+    "cookTime": "Cuisson",
+    "calories": "Calories",
+    "temperature": "Température",
+    "duration": "Durée",
+    "noRecipes": "Aucune recette",
+    "noIngredientsFound": "Aucun ingrédient trouvé",
+    "noStepsFound": "Aucune étape trouvée",
+    "cookButton": "Cuisiner",
+    "analyzing": "Analyse en cours...",
+    "extractingRecipe": "Extraction de la recette...",
+    "addToFolder": "Ajouter au dossier",
+    "removeFromFolder": "Retirer du dossier",
+    "deleteRecipe": "Supprimer la recette",
+    "shareRecipe": "Partager la recette",
+    "currentStep": "Étape {{current}}/{{total}}",
+    "platform": {
+      "tiktok": "TikTok",
+      "instagram": "Instagram",
+      "youtube": "YouTube"
+    },
+    "loading": "Chargement de la recette...",
+    "offlineUnavailable": "Recette indisponible hors ligne.",
+    "error": "Une erreur est survenue",
+    "back": "Retour",
+    "unclassified": "Non classée",
+    "portion": "portion",
+    "portions": "portions",
+    "macros": {
+      "carbs": "Glucides",
+      "proteins": "Protéines",
+      "fats": "Lipides",
+      "premiumTitle": "Oshii Premium",
+      "premiumDescription": "Débloquez l'accès aux macros détaillées",
+      "seeOffers": "Voir les offres"
+    },
+    "equipment": "Équipement",
+    "portionsLabel": "Portions",
+    "noScale": "Pas de balance",
+    "showAll": "Afficher tout",
+    "noIngredients": "Aucun ingrédient disponible",
+    "noSteps": "Aucune étape disponible",
+    "cook": "Cuisiner",
+    "stepsScreen": {
+      "defaultRecipeTitle": "Recette",
+      "stepTitle": "Étape {{order}}",
+      "ingredientsUsed": "Ingrédients utilisés",
+      "nextStep": "Étape {{order}} →",
+      "loading": "Chargement...",
+      "noSteps": "Aucune étape disponible",
+      "stepCount": "{{count}} étape",
+      "stepCount_plural": "{{count}} étapes"
+    },
+    "selectIngredients": {
+      "title": "Ajouter à la liste de courses",
+      "adding": "Ajout en cours...",
+      "addButton": "Ajouter {{count}} ingrédient",
+      "addButton_plural": "Ajouter {{count}} ingrédients"
+    },
+    "folderSelector": {
+      "title": "Choisir un dossier",
+      "loading": "Chargement des dossiers...",
+      "noFolder": "Aucun dossier",
+      "unclassified": "Non classée",
+      "recipeCount": "{{count}} recette",
+      "recipeCount_plural": "{{count}} recettes",
+      "confirm": "Confirmer"
+    },
+    "share": {
+      "dialogTitle": "Partager {{title}}",
+      "unavailable": "Partage indisponible",
+      "unavailableMessage": "Le partage n'est pas disponible sur cet appareil.",
+      "error": "Erreur",
+      "errorGenerating": "Impossible de générer l'image de la recette.",
+      "sharedSuccess": "Recette partagée",
+      "sharedSuccessMessage": "La recette a été partagée avec succès !",
+      "errorSharing": "Impossible de partager la recette.",
+      "options": {
+        "title": "Partager",
+        "subtitle": "Choisissez comment partager cette recette",
+        "exportImage": "Exporter en image",
+        "exportImageDescription": "Générer une image à partager sur les réseaux",
+        "shareToFriend": "Partager à un ami",
+        "shareToFriendDescription": "Envoyer cette recette à vos amis"
+      },
+      "toFriend": {
+        "title": "Partager à un ami",
+        "description": "Sélectionnez un ami pour partager cette recette",
+        "noFriends": "Vous n'avez pas encore d'amis",
+        "noFriendsSubtext": "Ajoutez des amis pour partager vos recettes",
+        "messagePlaceholder": "Ajouter un message (optionnel)",
+        "send": "Envoyer",
+        "defaultUser": "Utilisateur"
+      }
+    },
+    "analysis": {
+      "stages": {
+        "download": "Téléchargement",
+        "transcription": "Transcription",
+        "extraction": "Extraction",
+        "normalization": "Normalisation",
+        "finalization": "Finalisation"
+      },
+      "skeleton": {
+        "analyzingMessage": "On analyse la recette…",
+        "subtitles": {
+          "download": "Téléchargement de la vidéo",
+          "transcription": "Transcription de l'audio",
+          "extraction": "Extraction de la recette",
+          "normalization": "Normalisation des données",
+          "finalization": "Derniers ajustements"
+        },
+        "estimatedTime": "Temps estimé : ~{{time}}s",
+        "cancel": "Annuler"
+      },
+      "error": {
+        "title": "Oups — impossible d'analyser ce TikTok pour le moment.",
+        "hint": "Astuce : Le TikTok doit contenir une recette de cuisine (pas de sketch, pas de lifestyle).",
+        "defaultMessage": "Vérifie ta connexion ou réessaie.",
+        "persistentHint": "Si le problème persiste, copie le lien et colle-le sur l'écran d'accueil.",
+        "retry": "Réessayer",
+        "cancel": "Annuler",
+        "accessibilityLabel": "Erreur lors de l'analyse"
+      }
+    }
+  }
+}

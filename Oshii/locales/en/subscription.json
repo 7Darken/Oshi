@@ -1,0 +1,35 @@
+{
+  "title": "Oshii Pro",
+  "loading": "Loading offers...",
+  "features": [
+    "Unlimited recipes",
+    "Priority video analysis",
+    "Export your recipes as images",
+    "Share your favorite recipes",
+    "Access your friends' recipes"
+  ],
+  "plans": {
+    "annual": {
+      "label": "Annual",
+      "duration": "12 months",
+      "badge": "Save {{percentage}}%"
+    },
+    "monthly": {
+      "label": "Monthly",
+      "duration": "1 month"
+    },
+    "monthlyEquivalent": "• {{price}}/month"
+  },
+  "buttons": {
+    "continue": "Continue"
+  },
+  "footer": {
+    "restore": "Restore purchases",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "separator": "•"
+  },
+  "labels": {
+    "autoRenew": "Automatic renewal"
+  }
+}

@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { useAuthTranslation, useCommonTranslation } from '@/hooks/useI18n';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -34,6 +35,8 @@ export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, isLoading } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const { t } = useAuthTranslation();
+  const { t: tCommon } = useCommonTranslation();
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -45,17 +48,17 @@ export default function LoginScreen() {
 
     // Validation
     if (!email || !password) {
-      setError('Veuillez remplir tous les champs');
+      setError(t('fillAllFields'));
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Veuillez entrer un email valide');
+      setError(t('invalidEmail'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError(t('passwordTooShort'));
       return;
     }
 
@@ -70,17 +73,17 @@ export default function LoginScreen() {
           errorMessage.includes('invalid email or password') ||
           errorMessage.includes('incorrect') ||
           errorMessage.includes('wrong')) {
-        setError('Email ou mot de passe incorrect');
+        setError(t('emailOrPasswordIncorrect'));
       } else if (errorMessage.includes('email not confirmed')) {
-        setError('Veuillez confirmer votre email avant de vous connecter');
+        setError(t('emailNotConfirmed'));
       } else if (errorMessage.includes('too many requests')) {
-        setError('Trop de tentatives. Veuillez réessayer plus tard');
+        setError(t('tooManyRequests'));
       } else if (errorMessage.includes('network')) {
-        setError('Erreur de connexion. Vérifiez votre connexion internet');
+        setError(t('networkError'));
       } else {
         // Logger uniquement les erreurs inattendues
         console.error('❌ Erreur de connexion:', err);
-        setError('Erreur de connexion. Veuillez réessayer');
+        setError(t('unexpectedLoginError'));
       }
     }
   };
@@ -97,8 +100,8 @@ export default function LoginScreen() {
       if (result.error) {
         setIsGoogleLoading(false);
         Alert.alert(
-          'Erreur',
-          result.error.message || 'Une erreur est survenue lors de la connexion avec Google'
+          tCommon('common.error'),
+          result.error.message || t('loginErrorWithProvider', { provider: t('providers.google') })
         );
         return;
       }
@@ -114,8 +117,8 @@ export default function LoginScreen() {
     } catch (error: any) {
       setIsGoogleLoading(false);
       Alert.alert(
-        'Erreur',
-        error.message || 'Une erreur est survenue lors de la connexion avec Google'
+        tCommon('common.error'),
+        error.message || t('loginErrorWithProvider', { provider: t('providers.google') })
       );
     }
   };
@@ -128,8 +131,8 @@ export default function LoginScreen() {
       if (result.error) {
         setIsAppleLoading(false);
         Alert.alert(
-          'Erreur',
-          result.error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+          tCommon('common.error'),
+          result.error.message || t('loginErrorWithProvider', { provider: t('providers.apple') })
         );
         return;
       }
@@ -145,11 +148,17 @@ export default function LoginScreen() {
     } catch (error: any) {
       setIsAppleLoading(false);
       Alert.alert(
-        'Erreur',
-        error.message || 'Une erreur est survenue lors de la connexion avec Apple'
+        tCommon('common.error'),
+        error.message || t('loginErrorWithProvider', { provider: t('providers.apple') })
       );
     }
   };
+
+  const normalizedError = error?.toLowerCase() ?? null;
+  const emailFieldError = normalizedError ? normalizedError.includes('email') : false;
+  const passwordFieldError = normalizedError
+    ? normalizedError.includes('mot de passe') || normalizedError.includes('password')
+    : false;
 
   return (
     <KeyboardAvoidingView
@@ -163,16 +172,18 @@ export default function LoginScreen() {
       >
         <View style={styles.header}>
           <OshiiLogo size="lg" />
-          <Text style={[styles.title, { color: colors.text, marginTop: Spacing.md }]}>Bienvenue</Text>
+          <Text style={[styles.title, { color: colors.text, marginTop: Spacing.md }]}>
+            {t('loginTitle')}
+          </Text>
           <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Connectez-vous pour continuer
+            {t('loginSubtitle')}
           </Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="Email"
-            placeholder="Votre adresse email"
+            label={t('emailLabel')}
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
@@ -181,12 +192,12 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            error={error?.includes('email') ? error : undefined}
+            error={emailFieldError ? error ?? undefined : undefined}
           />
 
           <Input
-            label="Mot de passe"
-            placeholder="••••••••"
+            label={t('passwordLabel')}
+            placeholder={t('passwordPlaceholder')}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -194,15 +205,15 @@ export default function LoginScreen() {
             }}
             secureTextEntry
             autoCapitalize="none"
-            error={error?.includes('mot de passe') ? error : undefined}
+            error={passwordFieldError ? error ?? undefined : undefined}
           />
 
-          {error && !error.includes('email') && !error.includes('mot de passe') && (
+          {error && !emailFieldError && !passwordFieldError && (
             <Text style={styles.errorText}>{error}</Text>
           )}
 
           <Button
-            title="Se connecter"
+            title={t('loginCta')}
             onPress={handleLogin}
             loading={isLoading}
             style={styles.loginButton}
@@ -210,20 +221,20 @@ export default function LoginScreen() {
 
           <View style={styles.signupContainer}>
             <Text style={[styles.signupText, { color: colors.icon }]}>
-              Pas encore de compte ?{' '}
+              {t('dontHaveAccount')}{' '}
             </Text>
             <Text
               style={[styles.signupLink, { color: colors.primary }]}
               onPress={handleSignUp}
             >
-              Inscrivez-vous
+              {t('signupLink')}
             </Text>
           </View>
 
           {/* Divider */}
           <View style={styles.dividerContainer}>
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dividerText, { color: colors.icon }]}>ou</Text>
+            <Text style={[styles.dividerText, { color: colors.icon }]}>{tCommon('or')}</Text>
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
@@ -248,8 +259,11 @@ export default function LoginScreen() {
               />
             )}
             <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              {isGoogleLoading ? 'Connexion...' : (
-                <>Continuer avec <Text style={styles.socialButtonBold}>Google</Text></>
+              {isGoogleLoading ? t('connecting') : (
+                <>
+                  {t('continueWith')}{' '}
+                  <Text style={styles.socialButtonBold}>{t('providers.google')}</Text>
+                </>
               )}
             </Text>
           </TouchableOpacity>
@@ -280,8 +294,11 @@ export default function LoginScreen() {
               styles.socialButtonText,
               { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
             ]}>
-              {isAppleLoading ? 'Connexion...' : (
-                <>Continuer avec <Text style={styles.socialButtonBold}>Apple</Text></>
+              {isAppleLoading ? t('connecting') : (
+                <>
+                  {t('continueWith')}{' '}
+                  <Text style={styles.socialButtonBold}>{t('providers.apple')}</Text>
+                </>
               )}
             </Text>
           </TouchableOpacity>

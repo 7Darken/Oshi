@@ -7,17 +7,20 @@ import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
 import { useRecipeStepsLiveActivity } from '@/hooks/useRecipeStepsLiveActivity';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 import { FullRecipe } from '@/hooks/useRecipes';
 import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { Ingredient, Step as StepType } from '@/types/recipe';
+import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Clock, Thermometer } from 'lucide-react-native';
+import { ChevronRight, Clock, X as Cross, Thermometer } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -41,6 +44,7 @@ export default function StepsScreen() {
   const params = useLocalSearchParams<{ recipeId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   const { currentRecipe } = useRecipeStore();
   const { getFoodItemImage } = useFoodItems();
 
@@ -48,8 +52,11 @@ export default function StepsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
+  // Ref pour contrôler le scroll de la FlatList
+  const flatListRef = useRef<FlatList>(null);
+
   // Live Activity pour afficher l'étape sur l'écran verrouillé
-  const liveActivity = useRecipeStepsLiveActivity(recipe?.title || 'Recette');
+  const liveActivity = useRecipeStepsLiveActivity(recipe?.title || t('recipe.stepsScreen.defaultRecipeTitle'));
 
   // Charger la recette avec ingrédients et étapes
   React.useEffect(() => {
@@ -209,7 +216,7 @@ export default function StepsScreen() {
     return () => {
       liveActivity.stop();
     };
-  }, [recipe?.id, sortedStepsWithIngredients.length, isLoading]);
+  }, [recipe?.id, sortedStepsWithIngredients.length, isLoading, liveActivity]);
 
   // Mettre à jour la Live Activity quand on scroll vers une nouvelle étape
   const onViewableItemsChanged = useCallback(
@@ -242,10 +249,22 @@ export default function StepsScreen() {
 
   const viewabilityConfig = viewabilityConfigRef.current;
 
+  // Fonction pour scroller vers l'étape suivante
+  const scrollToNextStep = useCallback((currentIndex: number) => {
+    if (currentIndex < sortedStepsWithIngredients.length - 1) {
+      Platform.OS === 'ios' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      flatListRef.current?.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
+    }
+  }, [sortedStepsWithIngredients.length]);
+
   const renderStep = useCallback(
     ({ item, index }: { item: StepWithIngredients; index: number }) => {
       const hasIngredients = item.matchedIngredients && item.matchedIngredients.length > 0;
       const hasMetadata = item.duration || item.temperature;
+      const isLastStep = index === sortedStepsWithIngredients.length - 1;
 
       return (
         <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
@@ -256,7 +275,7 @@ export default function StepsScreen() {
 
           {/* Titre de l'étape */}
           <Text style={[styles.stepTitle, { color: colors.text }]}>
-            Étape {item.order}
+            {t('recipe.stepsScreen.stepTitle', { order: item.order })}
           </Text>
 
           {/* Description */}
@@ -292,7 +311,7 @@ export default function StepsScreen() {
           {hasIngredients && (
             <View style={[styles.ingredientsContainer, { borderTopColor: colors.border }]}>
               <Text style={[styles.ingredientsTitle, { color: colors.text }]}>
-                Ingrédients utilisés
+                {t('recipe.stepsScreen.ingredientsUsed')}
               </Text>
               <ScrollView
                 style={styles.ingredientsScrollView}
@@ -376,14 +395,25 @@ export default function StepsScreen() {
           {index < sortedStepsWithIngredients.length - 1 && (
             <View style={styles.progressIndicator}>
               <Text style={[styles.nextStepText, { color: colors.icon }]}>
-                Étape {item.order + 1} →
+                {t('recipe.stepsScreen.nextStep', { order: item.order + 1 })}
               </Text>
             </View>
+          )}
+
+          {/* Bouton suivant en bas à droite */}
+          {!isLastStep && (
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={() => scrollToNextStep(index)}
+              activeOpacity={0.7}
+            >
+              <ChevronRight size={32} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
           )}
         </View>
       );
     },
-    [sortedStepsWithIngredients.length, colors]
+    [sortedStepsWithIngredients.length, colors, scrollToNextStep, getFoodItemImage, colorScheme, t]
   );
 
   const getItemLayout = useCallback(
@@ -405,16 +435,20 @@ export default function StepsScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         <View style={styles.header}>
+          <View style={{ width: 44 }} />
+          <View style={{ flex: 1 }} />
           <TouchableOpacity
             onPress={() => router.back()}
             style={[styles.backButton, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}
             activeOpacity={0.8}
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <Cross size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.text }]}>Chargement...</Text>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            {t('recipe.stepsScreen.loading')}
+          </Text>
         </View>
       </View>
     );
@@ -425,17 +459,19 @@ export default function StepsScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         <View style={styles.header}>
+          <View style={{ width: 44 }} />
+          <View style={{ flex: 1 }} />
           <TouchableOpacity
             onPress={() => router.back()}
             style={[styles.backButton, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}
             activeOpacity={0.8}
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <Cross size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.text }]}>
-            Aucune étape disponible
+            {t('recipe.stepsScreen.noSteps')}
           </Text>
         </View>
       </View>
@@ -448,21 +484,22 @@ export default function StepsScreen() {
       
       {/* Header */}
       <View style={styles.header}>
+        <View style={{ width: 44 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {recipe.title}
+        </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.backButton, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}
           activeOpacity={0.8}
         >
-          <ArrowLeft size={20} color="#FFFFFF" />
+          <Cross size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {recipe.title}
-        </Text>
-        <View style={{ width: 44 }} />
       </View>
 
       {/* Liste des étapes */}
       <FlatList
+        ref={flatListRef}
         data={sortedStepsWithIngredients}
         renderItem={renderStep}
         keyExtractor={keyExtractor}
@@ -484,7 +521,7 @@ export default function StepsScreen() {
       {/* Indicateur de page */}
       <View style={styles.pageIndicator}>
         <Text style={[styles.pageIndicatorText, { color: colors.icon }]}>
-          {sortedStepsWithIngredients.length} étape{sortedStepsWithIngredients.length > 1 ? 's' : ''}
+          {t('recipe.stepsScreen.stepCount', { count: sortedStepsWithIngredients.length })}
         </Text>
       </View>
     </View>
@@ -521,7 +558,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
     marginHorizontal: Spacing.md,
@@ -545,6 +582,28 @@ const styles = StyleSheet.create({
     elevation: 3,
     flex: 1,
     justifyContent: 'flex-start',
+  },
+  nextButton: {
+    position: 'absolute',
+    bottom: CARD_PADDING,
+    right: CARD_PADDING,
+    width: 68,
+    height: 68,
+    borderRadius: 39,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 10,
   },
   stepNumberContainer: {
     width: 48,
@@ -575,7 +634,7 @@ const styles = StyleSheet.create({
   },
   ingredientsContainer: {
     marginTop: 'auto', // Pousser le container vers le bas
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xxl,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
     maxHeight: 200, // Hauteur maximale pour éviter l'agrandissement

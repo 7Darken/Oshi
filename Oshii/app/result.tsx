@@ -19,6 +19,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useNetworkContext } from '@/contexts/NetworkContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { FullRecipe } from '@/types/recipe';
@@ -51,6 +52,7 @@ export default function ResultScreen() {
   const params = useLocalSearchParams<{ recipeId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   const { currentRecipe, addRecipe } = useRecipeStore();
   const recipesCache = useRecipeStore((state) => state.recipes);
   const { user, isPremium } = useAuthContext();
@@ -130,11 +132,11 @@ export default function ResultScreen() {
       console.warn('⚠️ [Result] Recette introuvable dans le cache hors ligne');
       setDbRecipe(null);
       setCurrentFolder(null);
-      setError('Recette indisponible hors ligne.');
+      setError(t('recipe.offlineUnavailable'));
     }
 
     setIsLoading(false);
-  }, [isOffline, params.recipeId, cachedRecipe]);
+  }, [isOffline, params.recipeId, cachedRecipe, t]);
 
   // Charger la recette depuis le cache ou Supabase si recipeId est fourni
   useEffect(() => {
@@ -174,7 +176,7 @@ export default function ResultScreen() {
       // Si pas dans le cache et offline, erreur
       if (isOffline) {
         console.warn('⚠️ [Result] Recette non disponible hors ligne');
-        setError('Recette indisponible hors ligne.');
+        setError(t('recipe.offlineUnavailable'));
         setIsLoading(false);
         return;
       }
@@ -257,7 +259,7 @@ export default function ResultScreen() {
       } catch (err: any) {
         if (!cancelled) {
           console.error('❌ [Result] Erreur:', err);
-          setError(err.message || 'Une erreur est survenue');
+          setError(err.message || t('recipe.error'));
         }
       } finally {
         if (!cancelled) {
@@ -271,10 +273,16 @@ export default function ResultScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.recipeId, isOffline, addRecipe, cachedRecipe]);
+  }, [params.recipeId, isOffline, addRecipe, cachedRecipe, t]);
 
   // Déterminer quelle recette afficher
   const recipe = params.recipeId ? dbRecipe : currentRecipe;
+
+  // Vérifier si l'image est une thumbnail YouTube (avec letterboxing)
+  const isYoutubeThumbnail = useMemo(() => {
+    if (!recipe) return false;
+    return recipe.platform === 'YouTube';
+  }, [recipe]);
 
   // Initialiser le nombre de portions quand la recette charge
   useEffect(() => {
@@ -447,15 +455,15 @@ export default function ResultScreen() {
           mimeType: 'image/png',
         });
       } else {
-        Alert.alert('Partage indisponible', "Le partage n'est pas disponible sur cet appareil.");
+        Alert.alert(t('recipe.share.unavailable'), t('recipe.share.unavailableMessage'));
       }
     } catch (err: any) {
       console.error('❌ [Result] Export preview error:', err);
-      Alert.alert('Erreur', "Impossible de générer l'image de la recette.");
+      Alert.alert(t('recipe.share.error'), t('recipe.share.errorGenerating'));
     } finally {
       setIsGeneratingPreview(false);
     }
-  }, [recipe]);
+  }, [recipe, t]);
 
   const handleShareToFriendOpen = useCallback(() => {
     setShowShareToFriend(true);
@@ -500,15 +508,15 @@ export default function ResultScreen() {
         throw shareError;
       }
 
-      Alert.alert('Recette partagée', 'La recette a été partagée avec succès !');
+      Alert.alert(t('recipe.share.sharedSuccess'), t('recipe.share.sharedSuccessMessage'));
       setShowShareToFriend(false);
     } catch (err: any) {
       console.error('❌ [Result] Share to friend error:', err);
-      Alert.alert('Erreur', "Impossible de partager la recette.");
+      Alert.alert(t('recipe.share.error'), t('recipe.share.errorSharing'));
     } finally {
       setIsSharingToFriend(false);
     }
-  }, [recipe, user]);
+  }, [recipe, user, t]);
 
   // Ne rien afficher si en chargement
   if (isLoading || !recipe) {
@@ -516,7 +524,7 @@ export default function ResultScreen() {
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.icon }]}>
-          Chargement de la recette...
+          {t('recipe.loading')}
         </Text>
       </View>
     );
@@ -529,7 +537,7 @@ export default function ResultScreen() {
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.icon }]}>{error}</Text>
           <Button
-            title="Retour"
+            title={t('recipe.back')}
             onPress={() => router.replace('/(tabs)')}
             variant="secondary"
             style={{ marginTop: Spacing.md }}
@@ -731,7 +739,10 @@ export default function ResultScreen() {
               ? { uri: recipe.image_url }
               : require('@/assets/images/default_recipe.png')
           }
-          style={styles.recipeImage}
+          style={[
+            styles.recipeImage,
+            isYoutubeThumbnail && styles.youtubeImageZoom,
+          ]}
           contentFit="cover"
           placeholder={require('@/assets/images/default_recipe.png')}
           transition={200}
@@ -818,7 +829,7 @@ export default function ResultScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {currentFolder ? currentFolder.name : 'Non classée'}
+                    {currentFolder ? currentFolder.name : t('recipe.unclassified')}
                   </Text>
                 </View>
               )}
@@ -834,7 +845,7 @@ export default function ResultScreen() {
                 <View style={styles.metaItem}>
                   <Users size={18} color={colors.primary} />
                   <Text style={[styles.metaText, { color: colors.icon }]}>
-                    {recipe.servings} {recipe.servings === 1 ? 'portion' : 'portions'}
+                    {recipe.servings} {recipe.servings === 1 ? t('recipe.portion') : t('recipe.portions')}
                   </Text>
                 </View>
               )}
@@ -856,7 +867,7 @@ export default function ResultScreen() {
                 <View style={styles.macroContainer}>
                   <MacroCircle
                     value={Math.round(adjustedMacros.carbs)}
-                    label="Glucides"
+                    label={t('recipe.macros.carbs')}
                     color="#54C1F9"
                     percentage={adjustedMacros.carbPercent}
                     size={88}
@@ -864,7 +875,7 @@ export default function ResultScreen() {
                   />
                   <MacroCircle
                     value={Math.round(adjustedMacros.proteins)}
-                    label="Protéines"
+                    label={t('recipe.macros.proteins')}
                     color="#FF6B9D"
                     percentage={adjustedMacros.proteinPercent}
                     size={88}
@@ -872,7 +883,7 @@ export default function ResultScreen() {
                   />
                   <MacroCircle
                     value={Math.round(adjustedMacros.fats)}
-                    label="Lipides"
+                    label={t('recipe.macros.fats')}
                     color="#FFB84D"
                     percentage={adjustedMacros.fatPercent}
                     size={88}
@@ -886,14 +897,18 @@ export default function ResultScreen() {
                     style={styles.macroBlurOverlay}
                   >
                     <View style={styles.macroBlurContent}>
-                      <Text style={[styles.macroBlurTitle, { color: colors.text }]}>Oshii Premium</Text>
-                      <Text style={[styles.macroBlurSubtitle, { color: colors.icon }]}>Débloquez l'accès aux macros détaillées</Text>
+                      <Text style={[styles.macroBlurTitle, { color: colors.text }]}>
+                        {t('recipe.macros.premiumTitle')}
+                      </Text>
+                      <Text style={[styles.macroBlurSubtitle, { color: colors.icon }]}>
+                        {t('recipe.macros.premiumDescription')}
+                      </Text>
                       <TouchableOpacity
                         style={[styles.macroBlurButton, { backgroundColor: colors.primary }]}
                         activeOpacity={0.8}
                         onPress={() => router.push('/subscription')}
                       >
-                        <Text style={styles.macroBlurButtonText}>Voir les offres</Text>
+                        <Text style={styles.macroBlurButtonText}>{t('recipe.macros.seeOffers')}</Text>
                       </TouchableOpacity>
                     </View>
                   </BlurView>
@@ -915,7 +930,7 @@ export default function ResultScreen() {
           })()}
           {recipe && 'equipment' in recipe && Array.isArray(recipe.equipment) && recipe.equipment.length > 0 && (
             <View style={styles.equipmentSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Équipement</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recipe.equipment')}</Text>
               <View style={styles.equipmentGrid}>
                 {recipe.equipment.map((item: string, index: number) => {
                   const equipmentMap: { [key: string]: { name: string; icon: any } } = {
@@ -953,7 +968,7 @@ export default function ResultScreen() {
           <View style={styles.ingredientsSection}>
             <View style={styles.ingredientsHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Ingrédients
+                {t('recipe.ingredients')}
               </Text>
             </View>
  {/* Portion selector */}
@@ -962,7 +977,7 @@ export default function ResultScreen() {
                 <View style={styles.portionLabelContainer}>
                   <Users size={18} color={colors.primary} strokeWidth={2} />
                   <Text style={[styles.portionLabel, { color: colors.text }]}>
-                    Portions
+                    {t('recipe.portionsLabel')}
                   </Text>
                 </View>
                 <View style={[styles.portionSelectorCompact, { borderColor: colors.border }]}>
@@ -999,7 +1014,7 @@ export default function ResultScreen() {
               <View style={styles.conversionToggleLabelContainer}>
                 <Scale size={18} color="#EF4444" strokeWidth={2} />
                 <Text style={[styles.conversionToggleLabel, { color: colors.text }]}>
-                  Pas de balance
+                  {t('recipe.noScale')}
                 </Text>
               </View>
               <Switch
@@ -1040,7 +1055,7 @@ export default function ResultScreen() {
                       activeOpacity={0.7}
                     >
                       <Text style={[styles.showMoreText, { color: colors.text }]}>
-                        Afficher tout
+                        {t('recipe.showAll')}
                       </Text>
                       <Text style={[styles.showMoreCount, { color: colors.icon }]}>
                         +{adjustedIngredients.length - 6}
@@ -1071,7 +1086,7 @@ export default function ResultScreen() {
               </View>
             ) : (
               <Text style={[styles.emptyText, { color: colors.icon }]}>
-                Aucun ingrédient disponible
+                {t('recipe.noIngredients')}
               </Text>
             )}
           </View>
@@ -1080,7 +1095,7 @@ export default function ResultScreen() {
           <View style={styles.section}>
             <Card>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Étapes
+                {t('recipe.steps')}
               </Text>
               {recipe.steps && recipe.steps.length > 0 ? (
                 recipe.steps
@@ -1096,7 +1111,7 @@ export default function ResultScreen() {
                   })
               ) : (
                 <Text style={[styles.emptyText, { color: colors.icon }]}>
-                  Aucune étape disponible
+                  {t('recipe.noSteps')}
                 </Text>
               )}
             </Card>
@@ -1108,7 +1123,7 @@ export default function ResultScreen() {
         {params.recipeId && (
           <View style={styles.deleteSection}>
             <Button
-              title="Supprimer la recette"
+              title={t('recipe.deleteRecipe')}
               onPress={() => setShowDeleteConfirm(true)}
               variant="primary"
               style={{ backgroundColor: colors.destructive }}
@@ -1140,8 +1155,10 @@ export default function ResultScreen() {
             {recipe.steps && recipe.steps.length > 0 && (
               <TouchableOpacity
                 onPress={() => {
-                  // Retour haptique sur iOS
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  // Retour haptique fort sur iOS
+                  if (Platform.OS === 'ios') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  }
 
                   const recipeId = params.recipeId || (currentRecipe?.id as string);
                   if (recipeId) {
@@ -1160,7 +1177,7 @@ export default function ResultScreen() {
                 activeOpacity={0.8}
               >
                 <Play size={20} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
-                <Text style={styles.playButtonText}>Cuisiner</Text>
+                <Text style={styles.playButtonText}>{t('recipe.cook')}</Text>
               </TouchableOpacity>
             )}
             
@@ -1342,6 +1359,9 @@ const styles = StyleSheet.create({
   recipeImage: {
     width: '100%',
     height: '100%',
+  },
+  youtubeImageZoom: {
+    transform: [{ scale: 1.70 }],
   },
   header: {
     position: 'absolute',

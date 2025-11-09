@@ -19,6 +19,7 @@ import { Plus, Crown, Sparkles, Star } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCommonTranslation } from '@/hooks/useI18n';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { FolderCard } from '@/components/ui/FolderCard';
@@ -56,12 +57,14 @@ const FoldersContainer = React.memo(({
   cardWidth: number;
   onOpenPaywall: () => void;
 }) => {
+  const { t } = useCommonTranslation();
+
   if (folders.length === 0 && orphanCount === 0) return null;
 
   return (
     <View style={styles.foldersContainer}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Mes recettes</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.myRecipes')}</Text>
         {!isPremium && (
           <View style={[
             styles.generationsCounter, 
@@ -83,7 +86,7 @@ const FoldersContainer = React.memo(({
         {orphanCount > 0 && (
           <View style={{ width: cardWidth }}>
             <FolderCard
-              name="Non enregistrés"
+              name={t('home.unsavedRecipes')}
               recipeCount={orphanCount}
               iconName="folder"
               onPress={() => {
@@ -127,7 +130,7 @@ const FoldersContainer = React.memo(({
             </View>
           </View>
           <Text style={[styles.newFolderLabel, { color: colors.text }]}>
-            Nouveau dossier
+            {t('home.newFolder')}
           </Text>
           <Text style={[styles.newFolderSubLabel, { color: colors.icon }]}>
             {' '}
@@ -146,6 +149,7 @@ export default function HomeScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useCommonTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const { recipes, isLoading: recipesLoading, error: recipesError, refresh: refreshRecipes } = useRecipes();
   const { folders, createFolder, refresh: refreshFolders } = useFolders();
@@ -284,7 +288,7 @@ export default function HomeScreen() {
             {isPremium ? (
               <View style={[styles.proTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
                 <Star size={14} color={colors.primary} fill={colors.primary} />
-                <Text style={[styles.proTagText, { color: colors.primary }]}>Oshii Pro</Text>
+                <Text style={[styles.proTagText, { color: colors.primary }]}>{t('home.proBadge')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -293,7 +297,7 @@ export default function HomeScreen() {
                 activeOpacity={0.8}
               >
                 <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={styles.premiumButtonText}>Premium</Text>
+                <Text style={styles.premiumButtonText}>{t('home.premium')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -326,7 +330,7 @@ export default function HomeScreen() {
               {isPremium ? (
                 <View style={[styles.proTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
                   <Star size={14} color={colors.primary} fill={colors.primary} />
-                  <Text style={[styles.proTagText, { color: colors.primary }]}>Oshii Pro</Text>
+                  <Text style={[styles.proTagText, { color: colors.primary }]}>{t('home.proBadge')}</Text>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -335,7 +339,7 @@ export default function HomeScreen() {
                   activeOpacity={0.8}
                 >
                   <Crown size={16} color="#FFFFFF" strokeWidth={2.5} />
-                  <Text style={styles.premiumButtonText}>Premium</Text>
+                  <Text style={styles.premiumButtonText}>{t('home.premium')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -354,12 +358,12 @@ export default function HomeScreen() {
               
               {/* Titre */}
               <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                Aucune recette pour le moment
+                {t('home.emptyState.title')}
               </Text>
-              
+
               {/* Description */}
               <Text style={[styles.emptyStateDescription, { color: colors.icon }]}>
-                Transformez vos vidéos TikTok en recettes
+                {t('home.emptyState.description')}
               </Text>
               
               {/* Bouton CTA */}
@@ -383,7 +387,7 @@ export default function HomeScreen() {
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.icon }]}>
-                Chargement de vos recettes...
+                {t('home.loading')}
               </Text>
             </View>
           </View>
@@ -396,7 +400,7 @@ export default function HomeScreen() {
                 {recipesError}
               </Text>
               <Button
-                title="Réessayer"
+                title={t('home.retry')}
                 onPress={refreshRecipes}
                 variant="secondary"
                 style={{ marginTop: Spacing.md }}

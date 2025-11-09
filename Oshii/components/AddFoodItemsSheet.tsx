@@ -5,6 +5,7 @@
 import { Button } from '@/components/ui/Button';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useShoppingTranslation } from '@/hooks/useI18n';
 import { useFoodItems } from '@/hooks/useFoodItems';
 import { FoodItem } from '@/stores/useFoodItemsStore';
 import { Image as ExpoImage } from 'expo-image';
@@ -49,6 +50,7 @@ export function AddFoodItemsSheet({
 }: AddFoodItemsSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useShoppingTranslation();
   const { foodItems, searchFoodItems } = useFoodItems();
   const [selectedFoodItemIds, setSelectedFoodItemIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,16 +68,16 @@ export function AddFoodItemsSheet({
     const groups: Record<string, FoodItem[]> = {};
     
     filteredFoodItems.forEach((item) => {
-      const category = item.category || 'Autres';
+      const category = item.category || t('shopping.addSheet.otherCategory');
       if (!groups[category]) {
         groups[category] = [];
       }
       groups[category].push(item);
     });
-    
+
     // Trier les catégories alphabétiquement
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredFoodItems]);
+  }, [filteredFoodItems, t]);
 
   const toggleFoodItem = (foodItemId: string) => {
     const newSelected = new Set(selectedFoodItemIds);
@@ -114,7 +116,7 @@ export function AddFoodItemsSheet({
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Ajouter des ingrédients
+            {t('shopping.addSheet.title')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -125,7 +127,7 @@ export function AddFoodItemsSheet({
         <View style={styles.searchContainer}>
           <TextInput
             style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="Rechercher un ingrédient..."
+            placeholder={t('shopping.addSheet.searchPlaceholder')}
             placeholderTextColor={colors.icon}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -143,7 +145,7 @@ export function AddFoodItemsSheet({
           {filteredFoodItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.icon }]}>
-                {searchQuery ? 'Aucun ingrédient trouvé' : 'Aucun ingrédient disponible'}
+                {searchQuery ? t('shopping.addSheet.noResults') : t('shopping.addSheet.noIngredients')}
               </Text>
             </View>
           ) : (
@@ -207,10 +209,10 @@ export function AddFoodItemsSheet({
           <Button
             title={
               isAdding
-                ? 'Ajout en cours...'
+                ? t('shopping.addSheet.adding')
                 : selectedFoodItemIds.size > 0
-                ? `Ajouter (${selectedFoodItemIds.size})`
-                : 'Ajouter'
+                ? t('shopping.addSheet.addButton', { count: selectedFoodItemIds.size })
+                : t('shopping.addSheet.addButtonEmpty')
             }
             onPress={handleConfirm}
             disabled={selectedFoodItemIds.size === 0 || isAdding}

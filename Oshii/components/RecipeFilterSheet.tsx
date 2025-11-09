@@ -6,6 +6,7 @@ import {
 } from '@/constants/recipeCategories';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSearchTranslation } from '@/hooks/useI18n';
 import { Image as ExpoImage } from 'expo-image';
 import { X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -44,6 +45,7 @@ export function RecipeFilterSheet({
 }: RecipeFilterSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useSearchTranslation();
   const shadowColor = colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.12)';
 
   const totalSelectedFilters = selectedMealTypes.length + selectedDietTypes.length;
@@ -148,7 +150,7 @@ export function RecipeFilterSheet({
         <View style={styles.tagsGrid}>{children}</View>
       </View>
     ),
-    [colors.icon, colors.primary, colors.text],
+    [colors.icon, colors.primary, colors.text, t],
   );
 
   return (
@@ -170,7 +172,7 @@ export function RecipeFilterSheet({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={[styles.title, { color: colors.text }]}>
-              Filtres
+              {t('search.filters.title')}
             </Text>
             {totalSelectedFilters > 0 && (
               <View style={[styles.filterCountBadge, { backgroundColor: colors.primary }]}>
@@ -194,7 +196,9 @@ export function RecipeFilterSheet({
         >
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Type de repas</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('search.filters.mealType')}
+              </Text>
               {selectedMealTypes.length > 0 && (
                 <View style={[styles.sectionBadge, { backgroundColor: colors.primary }]}>
                   <Text style={[styles.sectionBadgeText, { color: '#FFFFFF' }]}>
@@ -217,7 +221,7 @@ export function RecipeFilterSheet({
           </View>
 
           {renderSection(
-            'Type de régime',
+            t('search.filters.dietType'),
             selectedDietTypes.length,
             DIET_TYPES_CONFIG.map((option) =>
               renderFilterOption(
@@ -247,7 +251,7 @@ export function RecipeFilterSheet({
               styles.secondaryButtonText,
               { color: totalSelectedFilters === 0 ? colors.icon : colors.text }
             ]}>
-              Réinitialiser
+              {t('search.filters.reset')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -257,8 +261,8 @@ export function RecipeFilterSheet({
           >
             <Text style={styles.primaryButtonText}>
               {totalSelectedFilters > 0
-                ? `Afficher les résultats (${totalSelectedFilters})`
-                : 'Afficher tout'}
+                ? t('search.filters.showResults', { count: totalSelectedFilters })
+                : t('search.filters.showAll')}
             </Text>
           </TouchableOpacity>
         </View>

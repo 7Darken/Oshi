@@ -6,9 +6,10 @@ import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRevenueCat } from '@/hooks/useRevenueCat';
+import { useSubscriptionTranslation } from '@/hooks/useI18n';
 import { useRouter } from 'expo-router';
 import { Check, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -24,6 +25,7 @@ export default function SubscriptionScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
+  const { t } = useSubscriptionTranslation();
   
   const { 
     isLoading, 
@@ -41,13 +43,10 @@ export default function SubscriptionScreen() {
     }
   }, [isPremium, isLoading, router]);
 
-  const features = [
-    'Recettes illimitées',
-    'Analyse vidéo prioritaire',
-    'Export de vos recettes en Image',
-    'Partagez vos recettes préférées',
-    'Accédez aux recettes de vos amis',
-  ];
+  const featureKeys = useMemo(
+    () => ['features.0', 'features.1', 'features.2', 'features.3', 'features.4'] as const,
+    []
+  );
 
   // Calculer le pourcentage d'économie de l'abonnement annuel
   const calculateSavingsPercentage = (): number => {
@@ -80,7 +79,7 @@ export default function SubscriptionScreen() {
     // Prix par mois
     const monthlyPrice = (annualPrice / 12).toFixed(2).replace('.', ',');
     
-    return `${monthlyPrice} ${currency}/mois`;
+    return t('plans.monthlyEquivalent', { price: `${monthlyPrice} ${currency}` });
   };
 
   const handleStartTrial = async () => {
@@ -143,7 +142,7 @@ export default function SubscriptionScreen() {
         <View style={[styles.content, styles.centerContent]}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>
-            Chargement des offres...
+            {t('loading')}
           </Text>
         </View>
       </SafeAreaView>
@@ -170,18 +169,18 @@ export default function SubscriptionScreen() {
 
         {/* Titre */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Oshii Pro
+          {t('title')}
         </Text>
 
         {/* Liste des fonctionnalités */}
         <View style={styles.featuresContainer}>
-          {features.map((feature, index) => (
+          {featureKeys.map((featureKey, index) => (
             <View key={index} style={styles.featureRow}>
               <View style={[styles.checkIcon, { backgroundColor: colors.primary }]}>
                 <Check size={16} color="#FFFFFF" strokeWidth={3} />
               </View>
               <Text style={[styles.featureText, { color: colors.text }]}>
-                {feature}
+                {t(featureKey)}
               </Text>
             </View>
           ))}
@@ -208,7 +207,7 @@ export default function SubscriptionScreen() {
               {/* Badge économies */}
               {savingsPercentage > 0 && (
                 <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.badgeText}>Économise {savingsPercentage}%</Text>
+                  <Text style={styles.badgeText}>{t('plans.annual.badge', { percentage: savingsPercentage })}</Text>
                 </View>
               )}
 
@@ -231,12 +230,12 @@ export default function SubscriptionScreen() {
                     </View>
                     <View>
                       <Text style={[styles.planTitle, { color: colors.text }]}>
-                        Annuel
+                        {t('plans.annual.label')}
                       </Text>
                       {/* Durée en bas, alignée avec le titre */}
                       <View style={styles.durationRow}>
                         <Text style={[styles.planDuration, { color: colors.icon }]}>
-                          12 mois
+                          {t('plans.annual.duration')}
                         </Text>
                         <Text style={[styles.monthlyEquivalent, { color: colors.icon }]}>
                           • {getAnnualMonthlyPrice()}
@@ -286,11 +285,11 @@ export default function SubscriptionScreen() {
                     </View>
                     <View>
                       <Text style={[styles.planTitle, { color: colors.text }]}>
-                        Mensuel
+                        {t('plans.monthly.label')}
                       </Text>
                       {/* Durée en bas, alignée avec le titre */}
                       <Text style={[styles.planDuration, { color: colors.icon }]}>
-                        1 mois
+                        {t('plans.monthly.duration')}
                       </Text>
                     </View>
                   </View>
@@ -305,7 +304,7 @@ export default function SubscriptionScreen() {
 
         {/* Note de renouvellement automatique */}
         <Text style={[styles.renewalNote, { color: colors.icon }]}>
-          Renouvellement automatique
+          {t('labels.autoRenew')}
         </Text>
 
         {/* Bouton CTA */}
@@ -325,7 +324,7 @@ export default function SubscriptionScreen() {
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text style={styles.ctaButtonText}>
-              Continuer
+              {t('buttons.continue')}
             </Text>
           )}
         </TouchableOpacity>
@@ -334,19 +333,23 @@ export default function SubscriptionScreen() {
         <View style={styles.footer}>
           <TouchableOpacity onPress={handleRestore} disabled={isPurchasing}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
-              Restaurer les achats
+              {t('footer.restore')}
             </Text>
           </TouchableOpacity>
-          <Text style={[styles.footerSeparator, { color: colors.icon }]}>•</Text>
+          <Text style={[styles.footerSeparator, { color: colors.icon }]}>
+            {t('footer.separator')}
+          </Text>
           <TouchableOpacity onPress={handleOpenTerms}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
-              Conditions
+              {t('footer.terms')}
             </Text>
           </TouchableOpacity>
-          <Text style={[styles.footerSeparator, { color: colors.icon }]}>•</Text>
+          <Text style={[styles.footerSeparator, { color: colors.icon }]}>
+            {t('footer.separator')}
+          </Text>
           <TouchableOpacity onPress={handleOpenPrivacy}>
             <Text style={[styles.footerLink, { color: colors.icon }]}>
-              Confidentialité
+              {t('footer.privacy')}
             </Text>
           </TouchableOpacity>
         </View>

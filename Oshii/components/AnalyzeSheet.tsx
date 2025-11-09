@@ -9,6 +9,7 @@ import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCommonTranslation } from '@/hooks/useI18n';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -44,6 +45,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
   const router = useRouter();
   const { isPremium, profile, canGenerateRecipe } = useAuthContext();
   const shiftAnim = useRef(new Animated.Value(0)).current;
+  const { t } = useCommonTranslation();
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -80,7 +82,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
 
   const handleAnalyze = () => {
     if (!url || url.trim().length === 0) {
-      setError('Veuillez saisir une URL valide');
+      setError(t('analyzeSheet.input.errors.empty'));
       return;
     }
 
@@ -88,7 +90,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
     try {
       new URL(url.trim());
     } catch {
-      setError('Format d\'URL invalide');
+      setError(t('analyzeSheet.input.errors.invalid'));
       return;
     }
 
@@ -120,11 +122,17 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
         setUrl(clipboardText.trim());
         setError(null);
       } else {
-        Alert.alert('Presse-papiers vide', 'Il n\'y a rien à coller dans le presse-papiers');
+        Alert.alert(
+          t('analyzeSheet.alerts.clipboardEmpty.title'),
+          t('analyzeSheet.alerts.clipboardEmpty.message')
+        );
       }
     } catch (error) {
       console.error('Erreur lors de la lecture du presse-papiers:', error);
-      Alert.alert('Erreur', 'Impossible de lire le presse-papiers');
+      Alert.alert(
+        t('analyzeSheet.alerts.clipboardError.title'),
+        t('analyzeSheet.alerts.clipboardError.message')
+      );
     }
   };
 
@@ -146,7 +154,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
             <View style={styles.header}>
               <View style={styles.headerSpacer} />
               <Text style={[styles.headerTitle, { color: colors.text }]}> 
-                Nouvelle recette
+                {t('analyzeSheet.title')}
               </Text>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <X size={24} color={colors.text} />
@@ -196,13 +204,13 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
           </View>
 
           {/* Description */}
-          <Text style={[styles.description, { color: colors.text }]}>
-            Collez un lien (Tiktok, YouTube, Instagram) pour transformer la vidéo en recette
+          <Text style={[styles.description, { color: colors.text }]}> 
+            {t('analyzeSheet.description')}
           </Text>
 
           {/* Label avec container de générations sur la même ligne */}
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: colors.text }]}>Lien (Tiktok, YouTube, Instagram)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('analyzeSheet.input.label')}</Text>
             {!isPremium && profile && (
               <View style={[styles.generationsContainer, { 
                 backgroundColor: colorScheme === 'dark' 
@@ -210,14 +218,14 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
                   : 'rgba(249, 64, 60, 0.1)',
                 borderColor: canGenerateRecipe ? 'transparent' : colors.primary,
                 borderWidth: canGenerateRecipe ? 0 : 1,
-              }]}>
+              }]}> 
                 <Sparkles size={14} color={colors.primary} />
                 <Text style={[styles.generationsText, { 
                   color: colors.primary 
-                }]}>
-                  {canGenerateRecipe 
-                    ? `${profile.free_generations_remaining} restante${profile.free_generations_remaining > 1 ? 's' : ''}`
-                    : 'Limite atteinte'}
+                }]}> 
+                  {canGenerateRecipe
+                    ? t('analyzeSheet.generations.remaining', { count: profile.free_generations_remaining })
+                    : t('analyzeSheet.generations.limitReached')}
                 </Text>
               </View>
             )}
@@ -226,7 +234,7 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
           {/* Input avec bouton coller */}
           <View style={styles.inputContainer}>
             <Input
-              placeholder="https://www.tiktok.com/@..."
+              placeholder={t('analyzeSheet.input.placeholder')}
               value={url}
               onChangeText={(text) => {
                 setUrl(text);
@@ -245,14 +253,14 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
               activeOpacity={0.7}
             >
               <ClipboardIcon size={18} color={colors.text} />
-              <Text style={[styles.pasteButtonText, { color: colors.text }]}>Coller</Text>
+              <Text style={[styles.pasteButtonText, { color: colors.text }]}>{t('analyzeSheet.paste.label')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Button */}
           <View style={styles.buttonContainer}>
             <Button
-              title={isLoading ? 'Analyse en cours...' : 'Analyser'}
+              title={isLoading ? t('analyzeSheet.button.loading') : t('analyzeSheet.button.cta')}
               onPress={handleAnalyze}
               disabled={!url || url.trim().length === 0 || isLoading}
               loading={isLoading}

@@ -1,0 +1,84 @@
+{
+  "profile": {
+    "defaultUsername": "Chef",
+    "profileTypes": {
+      "survivaliste": "Survivalist",
+      "cuisinier": "Cook",
+      "sportif": "Athlete",
+      "default": "Food lover"
+    },
+    "friendRequestSent": "Request sent to @{{username}}",
+    "friends": {
+      "title": "My friends",
+      "friendCount": "{{count}} friend",
+      "friendCount_plural": "{{count}} friends",
+      "requestCount": "{{count}} request",
+      "requestCount_plural": "{{count}} requests",
+      "pendingCount": "{{count}} pending",
+      "noFriendsYet": "You don't have any friends yet",
+      "addFriendsToShare": "Add friends to share your recipes",
+      "seeAllFriends": "See all friends ({{count}})",
+      "manageFriends": "Manage friends",
+      "defaultUser": "User",
+      "statusPending": "Pending",
+      "statusFriendRequest": "Friend request",
+      "statusFriend": "Friend",
+      "loading": "Loading...",
+      "tabs": {
+        "all": "All",
+        "received": "Received",
+        "sent": "Sent"
+      },
+      "empty": {
+        "noFriends": "No friends",
+        "noFriendsSubtitle": "Start adding friends to share your best recipes",
+        "noRequests": "No requests",
+        "noRequestsSubtitle": "You don't have any pending friend requests",
+        "noSentRequests": "No sent requests",
+        "noSentRequestsSubtitle": "Your pending friend requests will appear here"
+      },
+      "sections": {
+        "receivedRequests": "Received requests",
+        "friends": "Friends ({{count}})",
+        "pending": "Pending ({{count}})"
+      },
+      "actions": {
+        "cancel": "Cancel"
+      },
+      "alerts": {
+        "requestAccepted": "✅ Request accepted",
+        "nowFriends": "You are now friends!",
+        "error": "Error",
+        "genericError": "An error occurred",
+        "removeFriendTitle": "Remove friend",
+        "removeFriendMessage": "Are you sure you want to remove @{{username}} from your friends?",
+        "remove": "Remove"
+      },
+      "addFriend": {
+        "title": "Add friend",
+        "searchPlaceholder": "Username...",
+        "searchDescription": "Search for a friend by username",
+        "buttonAdd": "Add",
+        "errorEmptyUsername": "Please enter a username",
+        "errorNotFound": "User @{{username}} not found",
+        "errorAlreadyFriend": "You are already friends with @{{username}}",
+        "errorAlreadySent": "Request already sent to @{{username}}",
+        "errorAlreadyReceived": "@{{username}} already sent you a request"
+      }
+    },
+    "premium": {
+      "upgrade": "Upgrade to Oshii Pro",
+      "unlockFeatures": "Unlock all features",
+      "title": "Oshii Pro",
+      "features": {
+        "unlimitedGenerations": "Unlimited generations",
+        "customRecipes": "Custom recipes",
+        "prioritySupport": "Priority support"
+      }
+    },
+    "footer": {
+      "version": "Oshii v{{version}}",
+      "tagline": "Your recipes, simplified"
+    }
+  }
+}

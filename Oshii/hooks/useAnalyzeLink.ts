@@ -68,7 +68,7 @@ export function useAnalyzeLink() {
       setError(null);
 
       // Simuler la progression pour l'UI
-      const stages: AnalyzeStage[] = ['Téléchargement', 'Transcription', 'Extraction', 'Finalisation'];
+      const stages: AnalyzeStage[] = ['download', 'transcription', 'extraction', 'finalization'];
       let stageIndex = 0;
 
       const progressInterval = setInterval(() => {
@@ -107,8 +107,8 @@ export function useAnalyzeLink() {
           hasIngredients: !!recipe.ingredients?.length,
           hasSteps: !!recipe.steps?.length,
         });
-        
-        options?.onProgress?.('Finalisation');
+
+        options?.onProgress?.('finalization');
 
         // Petit délai pour montrer la finalisation
         await new Promise((resolve) => setTimeout(resolve, 400));

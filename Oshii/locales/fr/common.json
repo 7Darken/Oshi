@@ -1,0 +1,118 @@
+{
+  "app": {
+    "name": "Oshii"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "search": "Rechercher",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "done": "Terminé",
+    "share": "Partager"
+  },
+  "or": "ou",
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "daysAgo": "Il y a {{count}} jours",
+    "daysAgo_one": "Il y a {{count}} jour"
+  },
+  "units": {
+    "portion": "portion",
+    "portion_plural": "portions",
+    "recipe": "{{count}} recettes",
+    "recipe_one": "{{count}} recette",
+    "kcal": "kcal",
+    "min": "min",
+    "hour": "h"
+  },
+  "home": {
+    "myRecipes": "Mes recettes",
+    "unsavedRecipes": "Non enregistrés",
+    "newFolder": "Nouveau dossier",
+    "premium": "Premium",
+    "proBadge": "Oshii Pro",
+    "emptyState": {
+      "title": "Aucune recette pour le moment",
+      "description": "Transformez vos vidéos TikTok en recettes"
+    },
+    "loading": "Chargement de vos recettes...",
+    "retry": "Réessayer"
+  },
+  "createFolder": {
+    "label": "Nom du dossier",
+    "placeholder": "Ex: Desserts, Pâtes, Salades...",
+    "hint": "Organisez vos recettes enregistrées dans des dossiers",
+    "create": "Créer",
+    "creating": "Création...",
+    "errorEmpty": "Veuillez entrer un nom de dossier",
+    "errorCreate": "Erreur lors de la création du dossier"
+  },
+  "settings": {
+    "logout": "Se déconnecter",
+    "logoutAlert": {
+      "title": "Se déconnecter",
+      "message": "Es-tu sûr de vouloir te déconnecter ? Tu devras te reconnecter pour accéder à tes recettes.",
+      "confirm": "Oui, se déconnecter"
+    },
+    "deleteAccount": "Supprimer mon compte",
+    "deleteAccountAlert": {
+      "title": "Supprimer mon compte",
+      "message": "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action supprimera irréversiblement toutes vos données : vos recettes, vos dossiers, vos listes de courses, et toutes les informations associées à votre compte. Cette action est irréversible et ne peut pas être annulée."
+    },
+    "footer": {
+      "tagline": "Vos recettes, simplifiées",
+      "termsOfService": "Conditions d'utilisation",
+      "privacy": "Confidentialité"
+    }
+  },
+  "confirmDelete": {
+    "defaultTitle": "Supprimer la recette",
+    "defaultMessage": "Êtes-vous sûr de vouloir supprimer cette recette ? Cette action est irréversible.",
+    "cancel": "Annuler",
+    "delete": "Supprimer"
+  },
+  "analyzeSheet": {
+    "title": "Nouvelle recette",
+    "description": "Collez un lien pour transformer la vidéo en recette",
+    "input": {
+      "label": "Lien (TikTok, YouTube, Instagram)",
+      "placeholder": "https://www.tiktok.com/@...",
+      "errors": {
+        "empty": "Veuillez saisir une URL valide",
+        "invalid": "Format d'URL invalide"
+      }
+    },
+    "button": {
+      "cta": "Analyser",
+      "loading": "Analyse en cours..."
+    },
+    "paste": {
+      "label": "Coller"
+    },
+    "generations": {
+      "remaining_one": "{{count}} restante",
+      "remaining_other": "{{count}} restantes",
+      "limitReached": "Limite atteinte"
+    },
+    "alerts": {
+      "clipboardEmpty": {
+        "title": "Presse-papiers vide",
+        "message": "Il n'y a rien à coller dans le presse-papiers"
+      },
+      "clipboardError": {
+        "title": "Erreur",
+        "message": "Impossible de lire le presse-papiers"
+      }
+    }
+  }
+}

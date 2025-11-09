@@ -3,10 +3,11 @@
  */
 
 import { SelectRecipesSheet } from '@/components/SelectRecipesSheet';
+import { SYSTEM_FOLDERS, SYSTEM_FOLDER_NAMES } from '@/constants/systemFolders';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
-import { SYSTEM_FOLDERS, SYSTEM_FOLDER_NAMES, isSystemFolder } from '@/constants/systemFolders';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFolderRecipes } from '@/hooks/useFolderRecipes';
+import { useFoldersTranslation } from '@/hooks/useI18n';
 import { supabase } from '@/services/supabase';
 import { Image as ExpoImage } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -32,6 +33,7 @@ export default function FolderScreen() {
   const params = useLocalSearchParams<{ folderId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useFoldersTranslation();
 
   const rawFolderId = params.folderId;
   const isSystemFolderReceived = rawFolderId === SYSTEM_FOLDERS.RECEIVED;
@@ -164,7 +166,7 @@ export default function FolderScreen() {
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.icon }]}>
-              Chargement des recettes...
+              {t('common.loading')}
             </Text>
           </View>
         ) : error ? (
@@ -174,40 +176,47 @@ export default function FolderScreen() {
         ) : recipes.length === 0 ? (
           <View style={styles.centerContainer}>
             <Text style={[styles.emptyText, { color: colors.icon }]}>
-              {isSystemFolderReceived ? 'Aucune recette reçue' : 'Ce dossier est vide'}
+              {isSystemFolderReceived ? t('folders.noRecipesReceived') : t('folders.emptyFolder')}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.icon }]}>
               {isSystemFolderReceived
-                ? 'Les recettes partagées par vos amis apparaîtront ici'
+                ? t('folders.sharedRecipesAppearHere')
                 : folderId
-                  ? 'Ajoutez des recettes à ce dossier pour les voir ici'
-                  : 'Vos recettes non classées apparaîtront ici'}
+                  ? t('folders.addRecipesToFolder')
+                  : t('folders.unorganizedRecipesAppearHere')}
             </Text>
           </View>
         ) : (
           <View style={styles.recipesGrid}>
-            {recipes.map((recipe) => (
-              <TouchableOpacity
-                key={recipe.id}
-                onPress={() => handleRecipePress(recipe.id)}
-                activeOpacity={0.8}
-                style={styles.recipeCardContainer}
-              >
-                <View style={[styles.recipeCard, { backgroundColor: colors.card }]}>
-                  {/* Image de la recette */}
-                  <View style={styles.imageContainer}>
-                    <ExpoImage
-                      source={
-                        recipe.image_url
-                          ? { uri: recipe.image_url }
-                          : require('@/assets/images/default_recipe.png')
-                      }
-                      style={styles.recipeImage}
-                      contentFit="cover"
-                      placeholder={require('@/assets/images/default_recipe.png')}
-                      transition={200}
-                    />
-                  </View>
+            {recipes.map((recipe) => {
+              // Détecter si c'est un thumbnail YouTube pour appliquer le zoom
+              const isYoutubeThumbnail = recipe.platform === 'YouTube';
+
+              return (
+                <TouchableOpacity
+                  key={recipe.id}
+                  onPress={() => handleRecipePress(recipe.id)}
+                  activeOpacity={0.8}
+                  style={styles.recipeCardContainer}
+                >
+                  <View style={[styles.recipeCard, { backgroundColor: colors.card }]}>
+                    {/* Image de la recette */}
+                    <View style={styles.imageContainer}>
+                      <ExpoImage
+                        source={
+                          recipe.image_url
+                            ? { uri: recipe.image_url }
+                            : require('@/assets/images/default_recipe.png')
+                        }
+                        style={[
+                          styles.recipeImage,
+                          isYoutubeThumbnail && styles.youtubeImageZoom,
+                        ]}
+                        contentFit="cover"
+                        placeholder={require('@/assets/images/default_recipe.png')}
+                        transition={200}
+                      />
+                    </View>
 
                   {/* Informations */}
                   <View style={styles.recipeInfo}>
@@ -235,7 +244,8 @@ export default function FolderScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -339,6 +349,9 @@ const styles = StyleSheet.create({
   recipeImage: {
     width: '100%',
     height: '100%',
+  },
+  youtubeImageZoom: {
+    transform: [{ scale: 1.75 }],
   },
   recipeInfo: {
     padding: Spacing.md,

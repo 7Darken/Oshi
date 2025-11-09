@@ -18,6 +18,7 @@ import {
 import { Search, X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useProfileTranslation } from '@/hooks/useI18n';
 import { useFriends } from '@/hooks/useFriends';
 import * as Haptics from 'expo-haptics';
 
@@ -30,6 +31,7 @@ interface AddFriendSheetProps {
 export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useProfileTranslation();
   const { searchUsers, sendFriendRequest, getSentRequests } = useFriends();
 
   const [username, setUsername] = useState('');
@@ -46,7 +48,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
 
   const handleAddFriend = async () => {
     if (!username.trim()) {
-      setError('Veuillez saisir un nom d\'utilisateur');
+      setError(t('profile.friends.addFriend.errorEmptyUsername'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
@@ -59,7 +61,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
       const users = await searchUsers(username.trim());
 
       if (users.length === 0) {
-        setError(`Utilisateur @${username} introuvable`);
+        setError(t('profile.friends.addFriend.errorNotFound', { username }));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setIsSearching(false);
         return;
@@ -69,7 +71,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
 
       // Vérifier s'il est déjà ami
       if (user.is_friend) {
-        setError(`Vous êtes déjà ami avec @${user.username}`);
+        setError(t('profile.friends.addFriend.errorAlreadyFriend', { username: user.username }));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setIsSearching(false);
         return;
@@ -78,9 +80,9 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
       // Vérifier si demande déjà envoyée
       if (user.has_pending_request) {
         if (user.request_sent_by_me) {
-          setError(`Demande déjà envoyée à @${user.username}`);
+          setError(t('profile.friends.addFriend.errorAlreadySent', { username: user.username }));
         } else {
-          setError(`@${user.username} vous a déjà envoyé une demande`);
+          setError(t('profile.friends.addFriend.errorAlreadyReceived', { username: user.username }));
         }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setIsSearching(false);
@@ -103,11 +105,11 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
         setError(null);
         handleClose();
       } else {
-        setError(result.error || 'Une erreur est survenue');
+        setError(result.error || t('profile.friends.alerts.genericError'));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      setError(err.message || t('profile.friends.alerts.genericError'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSearching(false);
@@ -127,7 +129,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Ajouter un ami
+            {t('profile.friends.addFriend.title')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -142,7 +144,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
         >
           {/* Description */}
           <Text style={[styles.description, { color: colors.icon }]}>
-            Recherchez un ami par son nom d'utilisateur
+            {t('profile.friends.addFriend.searchDescription')}
           </Text>
 
           {/* Input */}
@@ -155,7 +157,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
             <Search size={20} color={colors.icon} style={styles.searchIcon} />
             <TextInput
               style={[styles.input, { color: colors.text }]}
-              placeholder="Nom d'utilisateur..."
+              placeholder={t('profile.friends.addFriend.searchPlaceholder')}
               placeholderTextColor={colors.icon}
               value={username}
               onChangeText={(text) => {
@@ -200,7 +202,7 @@ export function AddFriendSheet({ visible, onClose, onSuccess }: AddFriendSheetPr
             {isSearching || isSending ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.addButtonText}>Ajouter</Text>
+              <Text style={styles.addButtonText}>{t('profile.friends.addFriend.buttonAdd')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

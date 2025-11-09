@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Oshii is a mobile recipe extraction app built with React Native (TypeScript) and Expo. Users share TikTok cooking videos, and the app uses OpenAI GPT-4 to extract structured recipes (ingredients, steps, timing) through a custom Express backend.
 
 **Primary language:** French (UI, comments, documentation)
+**Internationalization:** Supports FR/EN with automatic language detection (i18next)
 
 ## Tech Stack
 
@@ -18,6 +19,7 @@ Oshii is a mobile recipe extraction app built with React Native (TypeScript) and
 - **Backend:** Express API for video analysis
 - **AI:** OpenAI GPT-4 for recipe extraction
 - **Payments:** RevenueCat (iOS subscriptions)
+- **i18n:** i18next + react-i18next + expo-localization (auto language detection)
 - **UI:** Reanimated, Lucide icons, expo-blur
 
 ## Development Commands
@@ -191,6 +193,30 @@ Refer to technical documentation for known issues:
 - Network detection via `@react-native-community/netinfo`
 - Offline banner when disconnected
 - Background sync on reconnection
+
+## Internationalization (i18n)
+
+**Auto language detection:** Detects device language on startup, fallback to English
+
+**Usage:**
+```typescript
+import { useI18n } from '@/hooks/useI18n';
+
+function MyComponent() {
+  const { t } = useI18n('recipe');
+  return <Text>{t('recipe.cookButton')}</Text>; // "Cuisiner" (FR) or "Cook" (EN)
+}
+```
+
+**File structure:**
+- `locales/fr/*.json` - French translations
+- `locales/en/*.json` - English translations
+- `services/i18n.ts` - i18next configuration
+- `hooks/useI18n.ts` - Translation hooks
+
+**Supported languages:** FR (default), EN (fallback)
+
+See `I18N_GUIDE.md` for complete documentation.
 
 ## Path Alias
 

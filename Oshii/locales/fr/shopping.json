@@ -1,0 +1,37 @@
+{
+  "shopping": {
+    "title": "Liste de courses",
+    "addButton": "Ajouter",
+    "loading": "Chargement de votre liste...",
+    "emptyTitle": "Votre liste est vide",
+    "emptySubtitle": "Ajoutez des ingrédients depuis vos recettes",
+    "toBuy": "À acheter ({{count}})",
+    "nothingToBuy": "Aucun article à acheter",
+    "alreadyBought": "Déjà acheté ({{count}})",
+    "clearAll": "Effacer tout",
+    "deleteItem": {
+      "title": "Supprimer l'article",
+      "message": "Êtes-vous sûr de vouloir supprimer cet article de votre liste de courses ?",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "deleteAllChecked": {
+      "title": "Effacer tout",
+      "message": "Êtes-vous sûr de vouloir supprimer les {{count}} article(s) déjà acheté(s) ?",
+      "cancel": "Annuler",
+      "confirm": "Effacer"
+    },
+    "addError": "Impossible d'ajouter les ingrédients à la liste de courses",
+    "deleteError": "Impossible de supprimer les articles",
+    "addSheet": {
+      "title": "Ajouter des ingrédients",
+      "searchPlaceholder": "Rechercher un ingrédient...",
+      "noResults": "Aucun ingrédient trouvé",
+      "noIngredients": "Aucun ingrédient disponible",
+      "adding": "Ajout en cours...",
+      "addButton": "Ajouter ({{count}})",
+      "addButtonEmpty": "Ajouter",
+      "otherCategory": "Autres"
+    }
+  }
+}

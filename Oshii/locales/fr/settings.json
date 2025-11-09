@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "title": "Paramètres",
+    "premium": "Abonnement Premium",
+    "managePremium": "Gérer mon abonnement",
+    "email": "Email",
+    "theme": "Thème",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "language": "Langue",
+    "languageAuto": "Automatique",
+    "languageFrench": "Français",
+    "languageEnglish": "English",
+    "help": "Aide",
+    "helpDescription": "Comment transformer vos vidéos",
+    "about": "À propos",
+    "aboutDescription": "Informations sur l'application",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "logout": "Déconnexion",
+    "deleteAccount": "Supprimer le compte",
+    "accountDeleted": "Compte supprimé",
+    "error": "Erreur",
+    "deleteError": "Une erreur est survenue lors de la suppression du compte. Veuillez réessayer.",
+    "appleAccount": "Compte Apple",
+    "notProvided": "Non renseigné",
+    "logoutButton": "Se déconnecter",
+    "deleteAccountButton": "Supprimer mon compte",
+    "logoutAlert": {
+      "title": "Se déconnecter",
+      "message": "Es-tu sûr de vouloir te déconnecter ? Tu devras te reconnecter pour accéder à tes recettes.",
+      "cancel": "Annuler",
+      "confirm": "Oui, se déconnecter"
+    },
+    "deleteAlert": {
+      "title": "Supprimer mon compte",
+      "message": "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action supprimera irréversiblement toutes vos données : vos recettes, vos dossiers, vos listes de courses, et toutes les informations associées à votre compte. Cette action est irréversible et ne peut pas être annulée."
+    },
+    "tagline": "Vos recettes, simplifiées",
+    "serviceUnavailable": "Service indisponible",
+    "subscriptionUnavailable": "La gestion de l'abonnement n'est pas disponible pour le moment. Veuillez réessayer plus tard.",
+    "subscriptionError": "Impossible d'ouvrir la gestion d'abonnement. Veuillez réessayer plus tard."
+  }
+}

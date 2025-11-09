@@ -16,6 +16,7 @@ import { Trash2, X } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/components/ui/Button';
+import { useCommonTranslation } from '@/hooks/useI18n';
 
 interface ConfirmDeleteSheetProps {
   visible: boolean;
@@ -31,12 +32,17 @@ export function ConfirmDeleteSheet({
   onClose,
   onConfirm,
   isDeleting = false,
-  title = 'Supprimer la recette',
-  message = 'Êtes-vous sûr de vouloir supprimer cette recette ? Cette action est irréversible.',
+  title,
+  message,
 }: ConfirmDeleteSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useCommonTranslation();
   const { width: windowWidth } = useWindowDimensions();
+
+  // Utiliser les traductions si title ou message ne sont pas fournis
+  const displayTitle = title || t('confirmDelete.defaultTitle');
+  const displayMessage = message || t('confirmDelete.defaultMessage');
 
   // Déterminer si on doit afficher les boutons en colonne sur les petits écrans
   const isSmallScreen = windowWidth < 350;
@@ -60,10 +66,10 @@ export function ConfirmDeleteSheet({
           </View>
 
           {/* Title */}
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{displayTitle}</Text>
 
           {/* Message */}
-          <Text style={[styles.message, { color: colors.icon }]}>{message}</Text>
+          <Text style={[styles.message, { color: colors.icon }]}>{displayMessage}</Text>
 
           {/* Buttons - Responsive: colonne sur petits écrans, ligne sur grands écrans */}
           <View style={[
@@ -71,7 +77,7 @@ export function ConfirmDeleteSheet({
             isSmallScreen && styles.buttonsContainerColumn
           ]}>
             <Button
-              title="Annuler"
+              title={t('confirmDelete.cancel')}
               onPress={onClose}
               variant="primary"
               style={
@@ -83,7 +89,7 @@ export function ConfirmDeleteSheet({
               disabled={isDeleting}
             />
             <Button
-              title="Supprimer"
+              title={t('confirmDelete.delete')}
               onPress={handleConfirm}
               variant="primary"
               style={

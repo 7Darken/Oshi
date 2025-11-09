@@ -14,6 +14,9 @@ import { useDeepLinking } from '@/hooks/useDeepLinking';
 import { CustomAlert } from '@/components/ui/CustomAlert';
 import { OfflineBanner } from '@/components/OfflineBanner';
 
+// Initialiser i18n (détecte automatiquement la langue du système)
+import '@/services/i18n';
+
 function RootNavigator() {
   const colorScheme = useColorScheme();
   

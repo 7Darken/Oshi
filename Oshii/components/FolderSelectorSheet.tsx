@@ -20,6 +20,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useFolders } from '@/hooks/useFolders';
+import { useRecipeTranslation } from '@/hooks/useI18n';
 
 // Palette de couleurs pour les icônes de dossiers
 const FOLDER_COLORS = [
@@ -67,6 +68,7 @@ export function FolderSelectorSheet({
 }: FolderSelectorSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { t } = useRecipeTranslation();
   const { folders, isLoading, error } = useFolders();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(currentFolderId);
 
@@ -92,7 +94,7 @@ export function FolderSelectorSheet({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Choisir un dossier
+            {t('recipe.folderSelector.title')}
           </Text>
           <Pressable
             onPress={onClose}
@@ -112,7 +114,7 @@ export function FolderSelectorSheet({
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.icon }]}>
-                Chargement des dossiers...
+                {t('recipe.folderSelector.loading')}
               </Text>
             </View>
           ) : error ? (
@@ -142,10 +144,10 @@ export function FolderSelectorSheet({
                     </View>
                     <View style={styles.folderInfo}>
                       <Text style={[styles.folderName, { color: colors.text }]}>
-                        Aucun dossier
+                        {t('recipe.folderSelector.noFolder')}
                       </Text>
                       <Text style={[styles.folderDescription, { color: colors.icon }]}>
-                        Non classée
+                        {t('recipe.folderSelector.unclassified')}
                       </Text>
                     </View>
                     {selectedFolderId === null && (
@@ -188,8 +190,7 @@ export function FolderSelectorSheet({
                           {folder.name}
                         </Text>
                         <Text style={[styles.folderDescription, { color: colors.icon }]}>
-                          {folder.recipes_count || 0}{' '}
-                          {folder.recipes_count === 1 ? 'recette' : 'recettes'}
+                          {t('recipe.folderSelector.recipeCount', { count: folder.recipes_count || 0 })}
                         </Text>
                       </View>
                       {selectedFolderId === folder.id && (
@@ -208,7 +209,7 @@ export function FolderSelectorSheet({
         {/* Footer avec bouton Confirmer */}
         <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
           <Button
-            title="Confirmer"
+            title={t('recipe.folderSelector.confirm')}
             onPress={handleConfirm}
             loading={isUpdating}
             disabled={isUpdating || selectedFolderId === currentFolderId}

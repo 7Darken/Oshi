@@ -3,15 +3,18 @@
  */
 
 import { ConfirmDeleteSheet } from '@/components/ConfirmDeleteSheet';
+import { LanguageSelectorSheet } from '@/components/LanguageSelectorSheet';
 import { TutorialSheet } from '@/components/TutorialSheet';
 import { Card } from '@/components/ui/Card';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSettingsTranslation } from '@/hooks/useI18n';
+import { useLanguageStore } from '@/stores/useLanguageStore';
 import { initRevenueCat } from '@/services/revenueCat';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { ChevronRight, HelpCircle, Info, LogOut, Mail, Moon, Star, Trash2, X } from 'lucide-react-native';
+import { ChevronRight, Globe, HelpCircle, Info, LogOut, Mail, Moon, Star, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -37,14 +40,16 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
   const colors = Colors[colorScheme ?? 'light'];
   const { deleteAccount, isPremium } = useAuthContext();
   const router = useRouter();
+  const { t } = useSettingsTranslation();
+  const { preferredLanguage } = useLanguageStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
 
   const appName = Constants?.expoConfig?.name ?? 'Oshii';
   const appVersion = Constants?.expoConfig?.version ?? '1.0.0';
-  const appTagline = 'Vos recettes, simplifiées';
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -61,8 +66,8 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
     } catch (err: any) {
       console.error('❌ [SettingsSheet] Erreur lors de la suppression du compte:', err);
       Alert.alert(
-        'Erreur',
-        err.message || 'Une erreur est survenue lors de la suppression du compte. Veuillez réessayer.'
+        t('settings.error'),
+        err.message || t('settings.deleteError')
       );
       setIsDeleting(false);
     }
@@ -80,8 +85,8 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
 
       if (!initialized) {
         Alert.alert(
-          'Service indisponible',
-          'La gestion de l’abonnement n’est pas disponible pour le moment. Veuillez réessayer plus tard.'
+          t('settings.serviceUnavailable'),
+          t('settings.subscriptionUnavailable')
         );
         return;
       }
@@ -90,8 +95,8 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
     } catch (error) {
       console.error('❌ [SettingsSheet] Erreur ouverture gestion abonnement:', error);
       Alert.alert(
-        'Erreur',
-        'Impossible d’ouvrir la gestion d’abonnement. Veuillez réessayer plus tard.'
+        t('settings.error'),
+        t('settings.subscriptionError')
       );
     } finally {
       setIsManagingSubscription(false);
@@ -100,10 +105,18 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
 
   // Vérifier si c'est un email Apple Private Relay
   const isApplePrivateRelay = user?.email?.includes('privaterelay.appleid.com');
-  const displayEmail = isApplePrivateRelay ? 'Compte Apple' : (user?.email || 'Non renseigné');
+  const displayEmail = isApplePrivateRelay ? t('settings.appleAccount') : (user?.email || t('settings.notProvided'));
 
   // Détecter le thème actuel
-  const themeLabel = colorScheme === 'dark' ? 'Sombre' : 'Clair';
+  const themeLabel = colorScheme === 'dark' ? t('settings.themeDark') : t('settings.themeLight');
+
+  // Label de la langue actuelle
+  const getLanguageLabel = () => {
+    if (preferredLanguage === null) return t('settings.languageAuto');
+    if (preferredLanguage === 'fr') return t('settings.languageFrench');
+    if (preferredLanguage === 'en') return t('settings.languageEnglish');
+    return t('settings.languageAuto');
+  };
 
   // Fonctions pour ouvrir les liens web
   const handleOpenTerms = async () => {
@@ -124,8 +137,17 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
 
   const settingsOptions = [
     {
+      id: 'language',
+      title: t('settings.language'),
+      icon: Globe,
+      description: getLanguageLabel(),
+      onPress: () => {
+        setShowLanguageSelector(true);
+      },
+    },
+    {
       id: 'theme',
-      title: 'Thème',
+      title: t('settings.theme'),
       icon: Moon,
       description: themeLabel,
       onPress: () => {
@@ -135,22 +157,22 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
     },
     {
       id: 'help',
-      title: 'Aide',
+      title: t('settings.help'),
       icon: HelpCircle,
-      description: 'Comment transformer vos vidéos',
+      description: t('settings.helpDescription'),
       onPress: () => {
         setShowTutorial(true);
       },
     },
     {
       id: 'about',
-      title: 'À propos',
+      title: t('settings.about'),
       icon: Info,
-      description: 'Informations sur l\'application',
+      description: t('settings.aboutDescription'),
       onPress: () => {
         Alert.alert(
           appName,
-          `Version ${appVersion}\n${appTagline}`,
+          `Version ${appVersion}\n${t('settings.tagline')}`,
           [{ text: 'OK', style: 'default' }],
         );
       },
@@ -169,7 +191,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Paramètres
+            {t('settings.title')}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -194,10 +216,10 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={[styles.optionTitle, { color: colors.text }]}>
-                      Abonnement Premium
+                      {t('settings.premium')}
                     </Text>
                     <Text style={[styles.optionDescription, { color: colors.icon }]}>
-                      Gérer mon abonnement
+                      {t('settings.managePremium')}
                     </Text>
                   </View>
                   <ChevronRight size={20} color={colors.icon} />
@@ -214,7 +236,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>
-                  Email
+                  {t('settings.email')}
                 </Text>
                 <Text style={[styles.optionDescription, { color: colors.icon }]}>
                   {displayEmail}
@@ -256,12 +278,12 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
               style={[styles.logoutButton, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}
               onPress={() => {
                 Alert.alert(
-                  'Se déconnecter',
-                  'Es-tu sûr de vouloir te déconnecter ? Tu devras te reconnecter pour accéder à tes recettes.',
+                  t('settings.logoutAlert.title'),
+                  t('settings.logoutAlert.message'),
                   [
-                    { text: 'Annuler', style: 'cancel' },
+                    { text: t('settings.logoutAlert.cancel'), style: 'cancel' },
                     {
-                      text: 'Oui, se déconnecter',
+                      text: t('settings.logoutAlert.confirm'),
                       style: 'destructive',
                       onPress: () => {
                         onLogout();
@@ -273,7 +295,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
               activeOpacity={0.7}
             >
               <LogOut size={20} color="#FF6B6B" />
-              <Text style={styles.logoutText}>Se déconnecter</Text>
+              <Text style={styles.logoutText}>{t('settings.logoutButton')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -285,7 +307,9 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
               activeOpacity={0.7}
             >
               <Trash2 size={20} color={colors.icon} />
-              <Text style={[styles.deleteText, { color: colors.icon }]}>Supprimer mon compte</Text>
+              <Text style={[styles.deleteText, { color: colors.icon }]}>
+                {t('settings.deleteAccountButton')}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -295,20 +319,20 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
               Oshii v1.0.0
             </Text>
             <Text style={[styles.tagline, { color: colors.icon }]}>
-              Vos recettes, simplifiées
+              {t('settings.tagline')}
             </Text>
-            
+
             {/* Liens légaux */}
             <View style={styles.legalLinks}>
               <TouchableOpacity onPress={handleOpenTerms}>
                 <Text style={[styles.legalLink, { color: colors.icon }]}>
-                  Conditions d&apos;utilisation
+                  {t('settings.terms')}
                 </Text>
               </TouchableOpacity>
               <Text style={[styles.legalSeparator, { color: colors.icon }]}>•</Text>
               <TouchableOpacity onPress={handleOpenPrivacy}>
                 <Text style={[styles.legalLink, { color: colors.icon }]}>
-                  Confidentialité
+                  {t('settings.privacy')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -322,14 +346,20 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteAccount}
         isDeleting={isDeleting}
-        title="Supprimer mon compte"
-        message="Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action supprimera irréversiblement toutes vos données : vos recettes, vos dossiers, vos listes de courses, et toutes les informations associées à votre compte. Cette action est irréversible et ne peut pas être annulée."
+        title={t('settings.deleteAlert.title')}
+        message={t('settings.deleteAlert.message')}
       />
 
       {/* Modal du tutoriel */}
       <TutorialSheet
         visible={showTutorial}
         onClose={() => setShowTutorial(false)}
+      />
+
+      {/* Modal de sélection de langue */}
+      <LanguageSelectorSheet
+        visible={showLanguageSelector}
+        onClose={() => setShowLanguageSelector(false)}
       />
     </Modal>
   );

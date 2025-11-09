@@ -15,13 +15,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { OshiiLogo } from '@/components/ui/OshiiLogo';
+import { useAuthTranslation } from '@/hooks/useI18n';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -32,6 +32,7 @@ export default function RegisterScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { signUp, isLoading } = useAuthContext();
+  const { t } = useAuthTranslation();
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -43,22 +44,22 @@ export default function RegisterScreen() {
 
     // Validation
     if (!email || !password || !confirmPassword) {
-      setError('Veuillez remplir tous les champs');
+      setError(t('fillAllFields'));
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Veuillez entrer un email valide');
+      setError(t('invalidEmail'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError(t('passwordTooShort'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(t('passwordsDoNotMatch'));
       return;
     }
 
@@ -72,18 +73,18 @@ export default function RegisterScreen() {
       if (errorMessage.includes('user already registered') || 
           errorMessage.includes('email already exists') ||
           errorMessage.includes('already in use')) {
-        setError('Cet email est déjà utilisé');
+        setError(t('emailAlreadyUsed'));
       } else if (errorMessage.includes('invalid email')) {
-        setError('Format d\'email invalide');
+        setError(t('invalidEmail'));
       } else if (errorMessage.includes('weak password') || 
                  errorMessage.includes('password is too weak')) {
-        setError('Le mot de passe est trop faible');
+        setError(t('passwordWeak'));
       } else if (errorMessage.includes('network')) {
-        setError('Erreur de connexion. Vérifiez votre connexion internet');
+        setError(t('networkError'));
       } else {
         // Logger uniquement les erreurs inattendues
         console.error('❌ Erreur d\'inscription:', err);
-        setError('Erreur lors de l\'inscription. Veuillez réessayer');
+        setError(t('unexpectedRegisterError'));
       }
     }
   };
@@ -117,16 +118,18 @@ export default function RegisterScreen() {
       >
         <View style={styles.header}>
           <OshiiLogo size="lg" />
-          <Text style={[styles.title, { color: colors.text, marginTop: Spacing.md }]}>Créer un compte</Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Rejoignez-nous pour commencer
+          <Text style={[styles.title, { color: colors.text, marginTop: Spacing.md }]}> 
+            {t('registerTitle')}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.icon }]}> 
+            {t('registerSubtitle')}
           </Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="Email"
-            placeholder="Votre adresse email"
+            label={t('emailLabel')}
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
@@ -138,8 +141,8 @@ export default function RegisterScreen() {
           />
 
           <Input
-            label="Mot de passe"
-            placeholder="••••••••"
+            label={t('passwordLabel')}
+            placeholder={t('passwordPlaceholder')}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -150,8 +153,8 @@ export default function RegisterScreen() {
           />
 
           <Input
-            label="Confirmer le mot de passe"
-            placeholder="••••••••"
+            label={t('confirmPasswordLabel')}
+            placeholder={t('confirmPasswordPlaceholder')}
             value={confirmPassword}
             onChangeText={(text) => {
               setConfirmPassword(text);
@@ -164,21 +167,21 @@ export default function RegisterScreen() {
           {error && <Text style={styles.errorText}>{error}</Text>}
 
           <Button
-            title="S'inscrire"
+            title={t('registerCta')}
             onPress={handleRegister}
             loading={isLoading}
             style={styles.registerButton}
           />
 
           <View style={styles.loginContainer}>
-            <Text style={[styles.loginText, { color: colors.icon }]}>
-              Déjà un compte ?{' '}
+            <Text style={[styles.loginText, { color: colors.icon }]}> 
+              {t('alreadyHaveAccount')}{' '}
             </Text>
             <Text
               style={[styles.loginLink, { color: colors.primary }]}
               onPress={handleLogin}
             >
-              Connectez-vous
+              {t('loginLink')}
             </Text>
           </View>
         </View>

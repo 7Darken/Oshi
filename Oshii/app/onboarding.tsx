@@ -8,12 +8,13 @@ import { ProfileTypeIcon } from '@/components/ui/ProfileTypeIcon';
 import { StepProgress } from '@/components/ui/StepProgress';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useOnboardingTranslation } from '@/hooks/useI18n';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/services/supabase';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -28,6 +29,8 @@ import {
 type Step = 1 | 2 | 3;
 
 type ProfileType = 'survivaliste' | 'cuisinier' | 'sportif';
+
+const PROFILE_TYPE_IDS: ProfileType[] = ['survivaliste', 'cuisinier', 'sportif'];
 
 // Images du tutoriel
 const tutorialImages = [
@@ -46,6 +49,7 @@ export default function OnboardingScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user, refreshSession, profile, refreshProfile } = useAuthContext();
+  const { t } = useOnboardingTranslation();
 
   // Récupérer le profil utilisateur pour préremplir le nom
   useEffect(() => {
@@ -75,23 +79,21 @@ export default function OnboardingScreen() {
     }
   }, [profile?.username, user?.user_metadata, username]);
 
-  const profileTypes: { id: ProfileType; label: string; description: string }[] = [
-    { 
-      id: 'survivaliste', 
-      label: 'Survivaliste', 
-      description: 'Recettes simples et efficaces',
-    },
-    { 
-      id: 'cuisinier', 
-      label: 'Cuisinier', 
-      description: 'Passion pour la gastronomie',
-    },
-    { 
-      id: 'sportif', 
-      label: 'Sportif', 
-      description: 'Alimentation équilibrée et healthy',
-    },
-  ];
+  useEffect(() => {
+    if (profile?.profile_type && PROFILE_TYPE_IDS.includes(profile.profile_type as ProfileType)) {
+      setProfileType(profile.profile_type as ProfileType);
+    }
+  }, [profile?.profile_type]);
+
+  const profileTypes = useMemo(
+    () =>
+      PROFILE_TYPE_IDS.map((id) => ({
+        id,
+        label: t(`step2.profileTypes.${id}.label`),
+        description: t(`step2.profileTypes.${id}.description`),
+      })),
+    [t]
+  );
 
 
   const handleBack = () => {
@@ -119,14 +121,14 @@ export default function OnboardingScreen() {
 
         if (checkError) {
           console.error('Erreur lors de la vérification du username:', checkError);
-          setError('Une erreur est survenue');
+          setError(t('errors.generic'));
           setIsLoading(false);
           return;
         }
 
         // Si un profil existe avec ce username et que ce n'est pas l'utilisateur actuel
         if (data && data.id !== user?.id) {
-          setError('Ce prénom est déjà pris');
+          setError(t('errors.usernameTaken'));
           setIsLoading(false);
           return;
         }
@@ -134,7 +136,7 @@ export default function OnboardingScreen() {
         setCurrentStep(2);
       } catch (err) {
         console.error('Erreur lors de la vérification du username:', err);
-        setError('Une erreur est survenue');
+        setError(t('errors.generic'));
       } finally {
         setIsLoading(false);
       }
@@ -180,6 +182,7 @@ export default function OnboardingScreen() {
       router.replace('/(tabs)?fromOnboarding=true');
     } catch (error: any) {
       console.error('❌ Erreur lors de la complétion de l\'onboarding:', error);
+      setError(t('errors.generic'));
       setIsLoading(false);
     }
   };
@@ -215,10 +218,10 @@ export default function OnboardingScreen() {
           {currentStep === 1 && (
             <View style={styles.stepContent}>
               <Text style={[styles.stepTitle, { color: colors.text }]}>
-                Quel est votre prénom ?
+                {t('step1.title')}
               </Text>
               <Text style={[styles.stepDescription, { color: colors.icon }]}>
-                Nous l&apos;utiliserons pour personnaliser votre expérience
+                {t('step1.description')}
               </Text>
               <TextInput
                 style={[
@@ -229,7 +232,7 @@ export default function OnboardingScreen() {
                     color: colors.text,
                   },
                 ]}
-                placeholder="Votre prénom"
+                placeholder={t('step1.placeholder')}
                 placeholderTextColor={colors.icon}
                 value={username}
                 onChangeText={(text) => {
@@ -253,10 +256,10 @@ export default function OnboardingScreen() {
           {currentStep === 2 && (
             <View style={styles.stepContent}>
               <Text style={[styles.stepTitle, { color: colors.text }]}>
-                Quel est votre profil ?
+                {t('step2.title')}
               </Text>
               <Text style={[styles.stepDescription, { color: colors.icon }]}>
-                Cela nous aide à vous proposer des recettes adaptées
+                {t('step2.description')}
               </Text>
               <View style={styles.optionsContainer}>
                 {profileTypes.map((type) => (
@@ -304,10 +307,10 @@ export default function OnboardingScreen() {
             <View style={styles.stepContentNoHorizontalPadding}>
               <View style={styles.step3TextContainer}>
                 <Text style={[styles.stepTitle, { color: colors.text }]}>
-                  Transforme tes vidéos
+                  {t('step3.title')}
                 </Text>
                 <Text style={[styles.stepDescription, { color: colors.icon }]}>
-                  Apprenez à utiliser l&apos;application en quelques étapes
+                  {t('step3.description')}
                 </Text>
               </View>
               <ScrollView
@@ -356,14 +359,14 @@ export default function OnboardingScreen() {
               >
                 <ChevronLeft size={20} color={colors.text} strokeWidth={2.5} />
                 <Text style={[styles.backButtonText, { color: colors.text }]}>
-                  Retour
+                  {t('buttons.back')}
                 </Text>
               </TouchableOpacity>
             )}
 
             {/* Bouton Suivant */}
             <Button
-              title={currentStep === 3 ? `C'est parti !` : 'Suivant'}
+              title={currentStep === 3 ? t('buttons.finish') : t('buttons.next')}
               onPress={handleNext}
               disabled={!canProceed() || isLoading}
               loading={isLoading}

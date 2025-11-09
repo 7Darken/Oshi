@@ -1,0 +1,35 @@
+{
+  "title": "Oshii Pro",
+  "loading": "Chargement des offres...",
+  "features": [
+    "Recettes illimitées",
+    "Analyse vidéo prioritaire",
+    "Export de vos recettes en image",
+    "Partagez vos recettes préférées",
+    "Accédez aux recettes de vos amis"
+  ],
+  "plans": {
+    "annual": {
+      "label": "Annuel",
+      "duration": "12 mois",
+      "badge": "Économise {{percentage}}%"
+    },
+    "monthly": {
+      "label": "Mensuel",
+      "duration": "1 mois"
+    },
+    "monthlyEquivalent": "• {{price}}/mois"
+  },
+  "buttons": {
+    "continue": "Continuer"
+  },
+  "footer": {
+    "restore": "Restaurer les achats",
+    "terms": "Conditions",
+    "privacy": "Confidentialité",
+    "separator": "•"
+  },
+  "labels": {
+    "autoRenew": "Renouvellement automatique"
+  }
+}
