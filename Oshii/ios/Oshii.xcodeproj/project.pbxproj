@@ -13,6 +13,11 @@
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		887F7977901566A375ADE368 /* libPods-Oshii.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DE15FB4CB887611EE9D15D17 /* libPods-Oshii.a */; };
 		B72A65AA2EB8CF8E00425F98 /* ShareFromTikTok.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B72A65A02EB8CF8E00425F98 /* ShareFromTikTok.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B772D2212EC072CA004D0449 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B772D2202EC072CA004D0449 /* WidgetKit.framework */; };
+		B772D2232EC072CA004D0449 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B772D2222EC072CA004D0449 /* SwiftUI.framework */; };
+		B772D2322EC072CB004D0449 /* RecipeStepsWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B772D21F2EC072CA004D0449 /* RecipeStepsWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B772D23F2EC0769E004D0449 /* RecipeStepsLiveActivity..swift in Sources */ = {isa = PBXBuildFile; fileRef = B772D23E2EC0769E004D0449 /* RecipeStepsLiveActivity..swift */; };
+		B772D2412EC0799B004D0449 /* RecipeStepsLiveActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = B772D2402EC0799B004D0449 /* RecipeStepsLiveActivity.m */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
@@ -25,6 +30,13 @@
 			remoteGlobalIDString = B72A659F2EB8CF8E00425F98;
 			remoteInfo = ShareFromTikTok;
 		};
+		B772D2302EC072CB004D0449 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B772D21E2EC072CA004D0449;
+			remoteInfo = RecipeStepsWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -34,6 +46,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				B772D2322EC072CB004D0449 /* RecipeStepsWidgetExtension.appex in Embed Foundation Extensions */,
 				B72A65AA2EB8CF8E00425F98 /* ShareFromTikTok.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -51,6 +64,11 @@
 		6AF2115494C7531621903BA0 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Oshii/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Oshii/SplashScreen.storyboard; sourceTree = "<group>"; };
 		B72A65A02EB8CF8E00425F98 /* ShareFromTikTok.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareFromTikTok.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B772D21F2EC072CA004D0449 /* RecipeStepsWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RecipeStepsWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B772D2202EC072CA004D0449 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		B772D2222EC072CA004D0449 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		B772D23E2EC0769E004D0449 /* RecipeStepsLiveActivity..swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeStepsLiveActivity..swift; sourceTree = "<group>"; };
+		B772D2402EC0799B004D0449 /* RecipeStepsLiveActivity.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RecipeStepsLiveActivity.m; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		DE15FB4CB887611EE9D15D17 /* libPods-Oshii.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Oshii.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -66,6 +84,20 @@
 			);
 			target = B72A659F2EB8CF8E00425F98 /* ShareFromTikTok */;
 		};
+		B772D2352EC072CB004D0449 /* Exceptions for "RecipeStepsWidget" folder in "RecipeStepsWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B772D21E2EC072CA004D0449 /* RecipeStepsWidgetExtension */;
+		};
+		B772D23D2EC0761B004D0449 /* Exceptions for "RecipeStepsWidget" folder in "Oshii" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				RecipeStepsAttributes.swift,
+			);
+			target = 13B07F861A680F5B00A75B9A /* Oshii */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -79,6 +111,19 @@
 			explicitFolders = (
 			);
 			path = ShareFromTikTok;
+			sourceTree = "<group>";
+		};
+		B772D2242EC072CA004D0449 /* RecipeStepsWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B772D23D2EC0761B004D0449 /* Exceptions for "RecipeStepsWidget" folder in "Oshii" target */,
+				B772D2352EC072CB004D0449 /* Exceptions for "RecipeStepsWidget" folder in "RecipeStepsWidgetExtension" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = RecipeStepsWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -99,6 +144,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B772D21C2EC072CA004D0449 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B772D2232EC072CA004D0449 /* SwiftUI.framework in Frameworks */,
+				B772D2212EC072CA004D0449 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -112,6 +166,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				576465895BE3E8D06C485002 /* PrivacyInfo.xcprivacy */,
+				B772D23E2EC0769E004D0449 /* RecipeStepsLiveActivity..swift */,
+				B772D2402EC0799B004D0449 /* RecipeStepsLiveActivity.m */,
 			);
 			name = Oshii;
 			sourceTree = "<group>";
@@ -121,6 +177,8 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				DE15FB4CB887611EE9D15D17 /* libPods-Oshii.a */,
+				B772D2202EC072CA004D0449 /* WidgetKit.framework */,
+				B772D2222EC072CA004D0449 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -163,6 +221,7 @@
 				13B07FAE1A68108700A75B9A /* Oshii */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				B72A65A12EB8CF8E00425F98 /* ShareFromTikTok */,
+				B772D2242EC072CA004D0449 /* RecipeStepsWidget */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				7E5553268C26C1643235DACE /* Pods */,
@@ -178,6 +237,7 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* Oshii.app */,
 				B72A65A02EB8CF8E00425F98 /* ShareFromTikTok.appex */,
+				B772D21F2EC072CA004D0449 /* RecipeStepsWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -212,6 +272,7 @@
 			);
 			dependencies = (
 				B72A65A92EB8CF8E00425F98 /* PBXTargetDependency */,
+				B772D2312EC072CB004D0449 /* PBXTargetDependency */,
 			);
 			name = Oshii;
 			productName = Oshii;
@@ -238,6 +299,26 @@
 			productReference = B72A65A02EB8CF8E00425F98 /* ShareFromTikTok.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		B772D21E2EC072CA004D0449 /* RecipeStepsWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B772D2362EC072CB004D0449 /* Build configuration list for PBXNativeTarget "RecipeStepsWidgetExtension" */;
+			buildPhases = (
+				B772D21B2EC072CA004D0449 /* Sources */,
+				B772D21C2EC072CA004D0449 /* Frameworks */,
+				B772D21D2EC072CA004D0449 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B772D2242EC072CA004D0449 /* RecipeStepsWidget */,
+			);
+			name = RecipeStepsWidgetExtension;
+			productName = RecipeStepsWidgetExtension;
+			productReference = B772D21F2EC072CA004D0449 /* RecipeStepsWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -251,6 +332,9 @@
 						LastSwiftMigration = 1250;
 					};
 					B72A659F2EB8CF8E00425F98 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					B772D21E2EC072CA004D0449 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
 				};
@@ -270,6 +354,7 @@
 			targets = (
 				13B07F861A680F5B00A75B9A /* Oshii */,
 				B72A659F2EB8CF8E00425F98 /* ShareFromTikTok */,
+				B772D21E2EC072CA004D0449 /* RecipeStepsWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -287,6 +372,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B72A659E2EB8CF8E00425F98 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B772D21D2EC072CA004D0449 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -428,10 +520,19 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				0AA1477529EF188FB003FD00 /* ExpoModulesProvider.swift in Sources */,
+				B772D23F2EC0769E004D0449 /* RecipeStepsLiveActivity..swift in Sources */,
+				B772D2412EC0799B004D0449 /* RecipeStepsLiveActivity.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B72A659C2EB8CF8E00425F98 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B772D21B2EC072CA004D0449 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -445,6 +546,11 @@
 			isa = PBXTargetDependency;
 			target = B72A659F2EB8CF8E00425F98 /* ShareFromTikTok */;
 			targetProxy = B72A65A82EB8CF8E00425F98 /* PBXContainerItemProxy */;
+		};
+		B772D2312EC072CB004D0449 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B772D21E2EC072CA004D0449 /* RecipeStepsWidgetExtension */;
+			targetProxy = B772D2302EC072CB004D0449 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -466,7 +572,7 @@
 				);
 				INFOPLIST_FILE = Oshii/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -500,7 +606,7 @@
 				DEVELOPMENT_TEAM = S3D8UU98A5;
 				INFOPLIST_FILE = Oshii/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -730,6 +836,101 @@
 			};
 			name = Release;
 		};
+		B772D2332EC072CB004D0449 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = S3D8UU98A5;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RecipeStepsWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RecipeStepsWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = com.x7kenz.Oshii.RecipeStepsWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B772D2342EC072CB004D0449 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = S3D8UU98A5;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RecipeStepsWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RecipeStepsWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = com.x7kenz.Oshii.RecipeStepsWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -756,6 +957,15 @@
 			buildConfigurations = (
 				B72A65AC2EB8CF8E00425F98 /* Debug */,
 				B72A65AD2EB8CF8E00425F98 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B772D2362EC072CB004D0449 /* Build configuration list for PBXNativeTarget "RecipeStepsWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B772D2332EC072CB004D0449 /* Debug */,
+				B772D2342EC072CB004D0449 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

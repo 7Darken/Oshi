@@ -6,6 +6,7 @@
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { useRecipeStepsLiveActivity } from '@/hooks/useRecipeStepsLiveActivity';
 import { FullRecipe } from '@/hooks/useRecipes';
 import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
@@ -13,7 +14,7 @@ import { Ingredient, Step as StepType } from '@/types/recipe';
 import { Image as ExpoImage } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock, Thermometer } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -23,6 +24,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewToken,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -41,9 +43,13 @@ export default function StepsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { currentRecipe } = useRecipeStore();
   const { getFoodItemImage } = useFoodItems();
-  
-  const [recipe, setRecipe] = React.useState<FullRecipe | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+
+  const [recipe, setRecipe] = useState<FullRecipe | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // Live Activity pour afficher l'étape sur l'écran verrouillé
+  const liveActivity = useRecipeStepsLiveActivity(recipe?.title || 'Recette');
 
   // Charger la recette avec ingrédients et étapes
   React.useEffect(() => {
@@ -183,6 +189,58 @@ export default function StepsScreen() {
         } as StepWithIngredients;
       });
   }, [recipe?.steps, recipe?.ingredients, matchIngredients]);
+
+  // Démarrer la Live Activity quand la recette est chargée
+  useEffect(() => {
+    if (!recipe || !sortedStepsWithIngredients.length || isLoading) {
+      return;
+    }
+
+    const firstStep = sortedStepsWithIngredients[0];
+    liveActivity.start({
+      currentStep: 1,
+      totalSteps: sortedStepsWithIngredients.length,
+      stepDescription: firstStep.text,
+      stepDuration: firstStep.duration,
+      stepTemperature: firstStep.temperature,
+    });
+
+    // Arrêter la Live Activity quand on quitte l'écran
+    return () => {
+      liveActivity.stop();
+    };
+  }, [recipe?.id, sortedStepsWithIngredients.length, isLoading]);
+
+  // Mettre à jour la Live Activity quand on scroll vers une nouvelle étape
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0) {
+        const visibleIndex = viewableItems[0].index;
+        if (visibleIndex !== null && visibleIndex !== currentStepIndex) {
+          setCurrentStepIndex(visibleIndex);
+
+          const currentStep = sortedStepsWithIngredients[visibleIndex];
+          if (currentStep) {
+            console.log('🔄 [Steps] Mise à jour Live Activity - Étape', visibleIndex + 1);
+            liveActivity.update({
+              currentStep: visibleIndex + 1,
+              totalSteps: sortedStepsWithIngredients.length,
+              stepDescription: currentStep.text,
+              stepDuration: currentStep.duration,
+              stepTemperature: currentStep.temperature,
+            });
+          }
+        }
+      }
+    },
+    [currentStepIndex, sortedStepsWithIngredients, liveActivity]
+  );
+
+  const viewabilityConfigRef = useRef({
+    itemVisiblePercentThreshold: 50,
+  });
+
+  const viewabilityConfig = viewabilityConfigRef.current;
 
   const renderStep = useCallback(
     ({ item, index }: { item: StepWithIngredients; index: number }) => {
@@ -419,6 +477,8 @@ export default function StepsScreen() {
         maxToRenderPerBatch={3}
         windowSize={5}
         initialNumToRender={2}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
 
       {/* Indicateur de page */}
