@@ -3,14 +3,16 @@
  * Première page de l'app avec options de connexion
  */
 
+import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthTranslation, useCommonTranslation } from '@/hooks/useI18n';
 import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Mail } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +32,20 @@ export default function WelcomeScreen() {
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const { t } = useAuthTranslation();
   const { t: tCommon } = useCommonTranslation();
+
+  const isDark = colorScheme === 'dark';
+  const primaryGradient = useMemo(
+    () =>
+      isDark
+        ? (['#151718', '#101317', '#0b0f13', '#06090d'] as const)
+        : (['#ffffff', '#f9fafc', '#f4f5f9', '#f1f2f6'] as const),
+    [isDark]
+  );
+  const haloColors = useMemo(
+    () =>
+      ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.08)', 'rgba(21,23,24,0)'] as const,
+    []
+  );
 
   const handleEmailLogin = () => {
     router.push('/login');
@@ -116,107 +132,145 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Logo et nom */}
-      <View style={styles.logoSection}>
-        <ExpoImage
-          source={require('@/assets/images/imgWelcome3d.png')}
-          style={styles.welcomeImage}
-          contentFit="contain"
+    <View style={styles.wrapper}>
+      <LinearGradient
+        colors={primaryGradient}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.05, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      {isDark && (
+        <LinearGradient
+          colors={haloColors}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.5, y: 0.05 }}
+          end={{ x: 0.5, y: 0.95 }}
+          style={styles.haloGlow}
+          pointerEvents="none"
         />
-        <Text style={[styles.appName, { color: colors.text }]}>Oshii</Text>
-        <Text style={[styles.description, { color: colors.icon }]}>
-          {t('welcomeHeadline')}
-        </Text>
-      </View>
+      )}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Illustration */}
+        <View style={styles.heroSection}>
+          <ExpoImage
+            source={require('@/assets/images/imgWelcome3d.png')}
+            style={styles.welcomeImage}
+            contentFit="contain"
+          />
+        </View>
 
-      {/* Boutons de connexion */}
-      <View style={styles.loginSection}>
-        {/* Email */}
-        <TouchableOpacity
-          style={[styles.loginButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={handleEmailLogin}
-          activeOpacity={0.8}
-        >
-          <Mail size={20} color={colors.text} />
-          <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.email')}</Text>
+        {/* Branding */}
+        <View style={styles.brandSection}>
+          <View style={styles.brandRow}>
+            <OshiiLogo size="lg" />
+            <Text style={[styles.appName, { color: colors.text }]}>Oshii</Text>
+          </View>
+          <Text style={[styles.description, { color: colors.icon }]}>
+            {t('welcomeHeadline')}
           </Text>
-        </TouchableOpacity>
+        </View>
 
-        {/* Google */}
-        <TouchableOpacity
-          style={[
-            styles.loginButton,
-            { backgroundColor: colors.card, borderColor: colors.border },
-            isGoogleLoading && styles.loginButtonDisabled
-          ]}
-          onPress={handleGoogleLogin}
-          activeOpacity={0.8}
-          disabled={isGoogleLoading}
-        >
-          {isGoogleLoading ? (
-            <ActivityIndicator size="small" color={colors.text} />
-          ) : (
-            <ExpoImage
-              source={require('@/assets/logo/GoogleLogo.png')}
-              style={styles.googleIcon}
-              contentFit="contain"
-            />
-          )}
-          <Text style={[styles.loginButtonText, { color: colors.text }]}>
-            {isGoogleLoading ? t('connecting') : (
-              <>
-                {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.google')}</Text>
-              </>
+        {/* Boutons de connexion */}
+        <View style={styles.loginSection}>
+          {/* Email */}
+          <TouchableOpacity
+            style={[styles.loginButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleEmailLogin}
+            activeOpacity={0.8}
+          >
+            <Mail size={20} color={colors.text} />
+            <Text style={[styles.loginButtonText, { color: colors.text }]}>
+              {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.email')}</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Google */}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              isGoogleLoading && styles.loginButtonDisabled
+            ]}
+            onPress={handleGoogleLogin}
+            activeOpacity={0.8}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <ExpoImage
+                source={require('@/assets/logo/GoogleLogo.png')}
+                style={styles.googleIcon}
+                contentFit="contain"
+              />
             )}
-          </Text>
-        </TouchableOpacity>
+            <Text style={[styles.loginButtonText, { color: colors.text }]}>
+              {isGoogleLoading ? t('connecting') : (
+                <>
+                  {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.google')}</Text>
+                </>
+              )}
+            </Text>
+          </TouchableOpacity>
 
-        {/* Apple */}
-        <TouchableOpacity
-          style={[
-            styles.loginButton,
-            {
-              backgroundColor: colorScheme === 'light' ? '#000000' : colors.card,
-              borderColor: colorScheme === 'light' ? '#000000' : colors.border,
-            },
-            isAppleLoading && styles.loginButtonDisabled
-          ]}
-          onPress={handleAppleLogin}
-          activeOpacity={0.8}
-          disabled={isAppleLoading}
-        >
-          {isAppleLoading ? (
-            <ActivityIndicator size="small" color={colorScheme === 'light' ? '#FFFFFF' : colors.text} />
-          ) : (
-            <ExpoImage
-              source={require('@/assets/logo/AppleLogo.png')}
-              style={styles.appleIcon}
-              contentFit="contain"
-            />
-          )}
-          <Text style={[
-            styles.loginButtonText,
-            { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
-          ]}>
-            {isAppleLoading ? t('connecting') : (
-              <>
-                {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.apple')}</Text>
-              </>
+          {/* Apple */}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              {
+                backgroundColor: colorScheme === 'light' ? '#000000' : colors.card,
+                borderColor: colorScheme === 'light' ? '#000000' : colors.border,
+              },
+              isAppleLoading && styles.loginButtonDisabled
+            ]}
+            onPress={handleAppleLogin}
+            activeOpacity={0.8}
+            disabled={isAppleLoading}
+          >
+            {isAppleLoading ? (
+              <ActivityIndicator size="small" color={colorScheme === 'light' ? '#FFFFFF' : colors.text} />
+            ) : (
+              <ExpoImage
+                source={require('@/assets/logo/AppleLogo.png')}
+                style={styles.appleIcon}
+                contentFit="contain"
+              />
             )}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+            <Text style={[
+              styles.loginButtonText,
+              { color: colorScheme === 'light' ? '#FFFFFF' : colors.text }
+            ]}>
+              {isAppleLoading ? t('connecting') : (
+                <>
+                  {t('continueWith')} <Text style={styles.loginButtonBold}>{t('providers.apple')}</Text>
+                </>
+              )}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
+  haloGlow: {
+    position: 'absolute',
+    width: 520,
+    height: 520,
+    top: -200,
+    alignSelf: 'center',
+    borderRadius: 520,
+    opacity: 0.85,
+    transform: [{ rotate: '-8deg' }],
+  },
   container: {
     flex: 1,
   },
@@ -224,35 +278,39 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xxl,
     paddingBottom: Spacing.xl,
   },
-  logoSection: {
+  heroSection: {
     alignItems: 'center',
-    marginBottom: Spacing.xxl * 2,
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl,
+    position: 'relative',
   },
   welcomeImage: {
-    width: 180,
-    height: 180,
-    shadowColor: 'white',
-    shadowOffset: {
-      width: 3,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    width: 340,
+    height: 340,
+  },
+  brandSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
   appName: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '700',
-    marginTop: Spacing.lg,
+    marginTop: 0,
+    marginLeft: -19,
     letterSpacing: 1,
   },
   description: {
     fontSize: 16,
     textAlign: 'center',
-    marginTop: Spacing.md,
+
     paddingHorizontal: Spacing.xl,
   },
   loginSection: {
