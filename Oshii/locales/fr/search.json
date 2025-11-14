@@ -13,6 +13,7 @@
       "title": "Filtres",
       "mealType": "Type de repas",
       "dietType": "Type de régime",
+      "cuisineOrigin": "Origine de la cuisine",
       "reset": "Réinitialiser",
       "showResults": "Afficher les résultats ({{count}})",
       "showAll": "Afficher tout"

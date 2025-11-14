@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -77,21 +77,21 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B72A65AE2EB8CF8E00425F98 /* Exceptions for "ShareFromTikTok" folder in "ShareFromTikTok" target */ = {
+		B72A65AE2EB8CF8E00425F98 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = B72A659F2EB8CF8E00425F98 /* ShareFromTikTok */;
 		};
-		B772D2352EC072CB004D0449 /* Exceptions for "RecipeStepsWidget" folder in "RecipeStepsWidgetExtension" target */ = {
+		B772D2352EC072CB004D0449 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = B772D21E2EC072CA004D0449 /* RecipeStepsWidgetExtension */;
 		};
-		B772D23D2EC0761B004D0449 /* Exceptions for "RecipeStepsWidget" folder in "Oshii" target */ = {
+		B772D23D2EC0761B004D0449 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				RecipeStepsAttributes.swift,
@@ -101,31 +101,8 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B72A65A12EB8CF8E00425F98 /* ShareFromTikTok */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B72A65AE2EB8CF8E00425F98 /* Exceptions for "ShareFromTikTok" folder in "ShareFromTikTok" target */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = ShareFromTikTok;
-			sourceTree = "<group>";
-		};
-		B772D2242EC072CA004D0449 /* RecipeStepsWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B772D23D2EC0761B004D0449 /* Exceptions for "RecipeStepsWidget" folder in "Oshii" target */,
-				B772D2352EC072CB004D0449 /* Exceptions for "RecipeStepsWidget" folder in "RecipeStepsWidgetExtension" target */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = RecipeStepsWidget;
-			sourceTree = "<group>";
-		};
+		B72A65A12EB8CF8E00425F98 /* ShareFromTikTok */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B72A65AE2EB8CF8E00425F98 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShareFromTikTok; sourceTree = "<group>"; };
+		B772D2242EC072CA004D0449 /* RecipeStepsWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B772D23D2EC0761B004D0449 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, B772D2352EC072CB004D0449 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = RecipeStepsWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */

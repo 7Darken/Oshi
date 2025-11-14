@@ -19,6 +19,8 @@
     "addToFolder": "Ajouter au dossier",
     "removeFromFolder": "Retirer du dossier",
     "deleteRecipe": "Supprimer la recette",
+    "deleteError": "Erreur de suppression",
+    "deleteErrorMessage": "Impossible de supprimer la recette. Veuillez réessayer.",
     "shareRecipe": "Partager la recette",
     "currentStep": "Étape {{current}}/{{total}}",
     "platform": {

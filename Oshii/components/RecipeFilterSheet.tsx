@@ -1,4 +1,6 @@
 import {
+  CUISINE_ORIGINS,
+  CuisineOrigin,
   DIET_TYPES_CONFIG,
   DietType,
   MEAL_TYPES_CONFIG,
@@ -6,7 +8,7 @@ import {
 } from '@/constants/recipeCategories';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSearchTranslation } from '@/hooks/useI18n';
+import { useI18n, useSearchTranslation } from '@/hooks/useI18n';
 import { Image as ExpoImage } from 'expo-image';
 import { X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -29,8 +31,10 @@ interface RecipeFilterSheetProps {
   onReset: () => void;
   onToggleMealType: (value: MealType) => void;
   onToggleDietType: (value: DietType) => void;
+  onToggleCuisineOrigin: (value: CuisineOrigin) => void;
   selectedMealTypes: MealType[];
   selectedDietTypes: DietType[];
+  selectedCuisineOrigins: CuisineOrigin[];
 }
 
 export function RecipeFilterSheet({
@@ -40,15 +44,21 @@ export function RecipeFilterSheet({
   onReset,
   onToggleMealType,
   onToggleDietType,
+  onToggleCuisineOrigin,
   selectedMealTypes,
   selectedDietTypes,
+  selectedCuisineOrigins,
 }: RecipeFilterSheetProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { t } = useSearchTranslation();
+  const { language } = useI18n();
   const shadowColor = colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.12)';
 
-  const totalSelectedFilters = selectedMealTypes.length + selectedDietTypes.length;
+  const totalSelectedFilters =
+    selectedMealTypes.length +
+    selectedDietTypes.length +
+    selectedCuisineOrigins.length;
 
   const renderFilterOption = useCallback(
     (label: string, icon: ImageSourcePropType | undefined, isActive: boolean, onPress: () => void, key?: string) => (
@@ -122,6 +132,47 @@ export function RecipeFilterSheet({
               fontWeight: isActive ? '600' : '500',
             },
           ]}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [colors.primary, colors.card, colors.border, colors.text, colorScheme],
+  );
+
+  const renderCuisineCard = useCallback(
+    (label: string, flag: string, isActive: boolean, onPress: () => void, key?: string) => (
+      <TouchableOpacity
+        key={key ?? label}
+        style={[
+          styles.cuisineCard,
+          {
+            backgroundColor: isActive
+              ? (colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)')
+              : colors.card,
+            borderColor: isActive ? colors.primary : colors.border,
+            borderWidth: isActive ? 1.5 : 1,
+          },
+        ]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cuisineFlagContainer}>
+          <ExpoImage
+            source={{ uri: flag }}
+            style={styles.cuisineFlag}
+            contentFit="cover"
+          />
+        </View>
+        <Text
+          style={[
+            styles.cuisineText,
+            {
+              color: colors.text,
+              fontWeight: isActive ? '600' : '500',
+            },
+          ]}
+          numberOfLines={1}
         >
           {label}
         </Text>
@@ -208,31 +259,61 @@ export function RecipeFilterSheet({
               )}
             </View>
             <View style={styles.mealTypesGrid}>
-              {MEAL_TYPES_CONFIG.map((option) =>
-                renderMealTypeCard(
-                  option.label,
+              {MEAL_TYPES_CONFIG.map((option) => {
+                const displayLabel = language === 'en' && option.label_en ? option.label_en : option.label;
+
+                return renderMealTypeCard(
+                  displayLabel,
                   option.icon,
                   selectedMealTypes.includes(option.value),
                   () => onToggleMealType(option.value),
                   `meal-${option.value}`,
-                ),
-              )}
+                );
+              })}
             </View>
           </View>
 
           {renderSection(
             t('search.filters.dietType'),
             selectedDietTypes.length,
-            DIET_TYPES_CONFIG.map((option) =>
-              renderFilterOption(
-                option.label,
+            DIET_TYPES_CONFIG.map((option) => {
+              const displayLabel = language === 'en' && option.label_en ? option.label_en : option.label;
+
+              return renderFilterOption(
+                displayLabel,
                 option.icon,
                 selectedDietTypes.includes(option.value),
                 () => onToggleDietType(option.value),
                 `diet-${option.value}`,
-              ),
-            ),
+              );
+            }),
           )}
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('search.filters.cuisineOrigin')}
+              </Text>
+              {selectedCuisineOrigins.length > 0 && (
+                <View style={[styles.sectionBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.sectionBadgeText, { color: '#FFFFFF' }]}>
+                    {selectedCuisineOrigins.length}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.cuisineGrid}>
+              {CUISINE_ORIGINS.map((option) => {
+                return renderCuisineCard(
+                  option.label,
+                  option.flag,
+                  selectedCuisineOrigins.includes(option.value),
+                  () => onToggleCuisineOrigin(option.value),
+                  `cuisine-${option.value}`,
+                );
+              })}
+            </View>
+          </View>
         </ScrollView>
 
         <View
@@ -404,6 +485,35 @@ const styles = StyleSheet.create({
   mealTypeText: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  cuisineCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: Spacing.sm,
+    paddingRight: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    minHeight: 44,
+    gap: Spacing.sm,
+  },
+  cuisineFlagContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    overflow: 'hidden',
+    backgroundColor: '#E5E5E5',
+  },
+  cuisineFlag: {
+    width: '100%',
+    height: '100%',
+  },
+  cuisineText: {
+    fontSize: 14,
   },
   actions: {
     flexDirection: 'row',

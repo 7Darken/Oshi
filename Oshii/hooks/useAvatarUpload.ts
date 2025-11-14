@@ -14,7 +14,7 @@ interface UseAvatarUploadReturn {
 }
 
 export function useAvatarUpload(): UseAvatarUploadReturn {
-  const { user, refreshProfile } = useAuthContext();
+  const { user, profile, refreshProfile } = useAuthContext();
   const [isUploading, setIsUploading] = useState(false);
 
   const uploadAvatar = async () => {
@@ -25,6 +25,12 @@ export function useAvatarUpload(): UseAvatarUploadReturn {
       Alert.alert('Erreur', 'Vous devez être connecté pour modifier votre photo de profil');
       return;
     }
+
+    const previousAvatarPath = (() => {
+      if (!profile?.avatar_url) return null;
+      const parts = profile.avatar_url.split('/storage/v1/object/public/users-pp/');
+      return parts.length === 2 ? parts[1] : null;
+    })();
 
     try {
       console.log('🔑 [useAvatarUpload] Demande de permission...');
@@ -46,7 +52,7 @@ export function useAvatarUpload(): UseAvatarUploadReturn {
 
       // Ouvrir la galerie avec options de crop
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -68,12 +74,22 @@ export function useAvatarUpload(): UseAvatarUploadReturn {
       setIsUploading(true);
       console.log('📤 [useAvatarUpload] Début de l\'upload...');
 
-      const imageUri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const imageUri = asset.uri;
       console.log('📸 [useAvatarUpload] URI de l\'image:', imageUri);
 
       // Créer un nom de fichier unique
-      const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `avatar.${fileExt}`;
+      const fileNameFromPicker = asset.fileName?.split('/')?.pop();
+      const fileExtFromName = fileNameFromPicker?.includes('.')
+        ? fileNameFromPicker.split('.').pop()?.toLowerCase()
+        : undefined;
+      const mimeTypeExt = asset.mimeType?.split('/').pop()?.toLowerCase();
+      const fileExt =
+        mimeTypeExt === 'jpeg'
+          ? 'jpg'
+          : mimeTypeExt || fileExtFromName || imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+      const uniqueSuffix = Date.now();
+      const fileName = `avatar-${uniqueSuffix}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
       console.log('📁 [useAvatarUpload] Chemin fichier:', filePath);
 
@@ -99,8 +115,9 @@ export function useAvatarUpload(): UseAvatarUploadReturn {
       const { error: uploadError } = await supabase.storage
         .from('users-pp')
         .upload(filePath, fileData, {
-          contentType: `image/${fileExt}`,
-          upsert: true,
+          contentType: asset.mimeType || `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
+          cacheControl: '3600',
+          upsert: false,
         });
 
       if (uploadError) {
@@ -135,6 +152,19 @@ export function useAvatarUpload(): UseAvatarUploadReturn {
       // Rafraîchir le profil pour afficher la nouvelle image
       console.log('🔄 [useAvatarUpload] Rafraîchissement du profil...');
       await refreshProfile();
+
+      // Supprimer l'ancien avatar si présent et différent
+      if (previousAvatarPath && previousAvatarPath !== filePath) {
+        console.log('🧹 [useAvatarUpload] Suppression de l\'ancien avatar...', previousAvatarPath);
+        const { error: removeError } = await supabase.storage
+          .from('users-pp')
+          .remove([previousAvatarPath]);
+        if (removeError) {
+          console.warn('⚠️ [useAvatarUpload] Impossible de supprimer l\'ancien avatar:', removeError.message);
+        } else {
+          console.log('✅ [useAvatarUpload] Ancien avatar supprimé');
+        }
+      }
 
       console.log('✅ [useAvatarUpload] Processus terminé avec succès');
       Alert.alert('Succès', 'Votre photo de profil a été mise à jour');

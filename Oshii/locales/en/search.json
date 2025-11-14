@@ -13,6 +13,7 @@
       "title": "Filters",
       "mealType": "Meal type",
       "dietType": "Diet type",
+      "cuisineOrigin": "Cuisine origin",
       "reset": "Reset",
       "showResults": "Show results ({{count}})",
       "showAll": "Show all"

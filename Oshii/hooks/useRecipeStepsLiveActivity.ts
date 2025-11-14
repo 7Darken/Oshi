@@ -3,7 +3,7 @@
  * Affiche l'étape actuelle sur l'écran verrouillé iOS
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { NativeModules, Platform } from 'react-native';
 
 const { RecipeStepsLiveActivity } = NativeModules;

@@ -19,6 +19,8 @@
     "addToFolder": "Add to folder",
     "removeFromFolder": "Remove from folder",
     "deleteRecipe": "Delete recipe",
+    "deleteError": "Deletion error",
+    "deleteErrorMessage": "Unable to delete the recipe. Please try again.",
     "shareRecipe": "Share recipe",
     "currentStep": "Step {{current}}/{{total}}",
     "platform": {

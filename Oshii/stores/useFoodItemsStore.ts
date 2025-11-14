@@ -9,6 +9,7 @@ import { supabase } from '@/services/supabase';
 export interface FoodItem {
   id: string;
   name: string;
+  name_en?: string | null;
   image_url: string | null;
   category: string | null;
   created_at: string;
@@ -90,10 +91,13 @@ export const useFoodItemsStore = create<FoodItemsStore>((set, get) => ({
       return [];
     }
 
-    return foodItems.filter((item) =>
-      item.name.toLowerCase().includes(lowerQuery) ||
-      (item.category && item.category.toLowerCase().includes(lowerQuery))
-    );
+    return foodItems.filter((item) => {
+      const matchesName = item.name.toLowerCase().includes(lowerQuery);
+      const matchesNameEn = item.name_en?.toLowerCase().includes(lowerQuery) ?? false;
+      const matchesCategory = item.category?.toLowerCase().includes(lowerQuery) ?? false;
+
+      return matchesName || matchesNameEn || matchesCategory;
+    });
   },
 
   getFoodItemImage: (id: string) => {

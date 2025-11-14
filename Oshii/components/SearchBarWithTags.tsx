@@ -2,27 +2,31 @@
  * Composant de recherche avec autocomplétion et tags pour food_items
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Search, X } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { useI18n } from '@/hooks/useI18n';
 import { FoodItem } from '@/stores/useFoodItemsStore';
+import { Image as ExpoImage } from 'expo-image';
+import { Search, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { ScrollView as ScrollViewType } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface SearchBarWithTagsProps {
   selectedFoodItems: FoodItem[];
   onFoodItemsChange: (foodItems: FoodItem[]) => void;
   placeholder?: string;
 }
+
+const TAGS_MAX_HEIGHT = 136;
 
 export function SearchBarWithTags({
   selectedFoodItems,
@@ -32,10 +36,23 @@ export function SearchBarWithTags({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { searchFoodItems, isInitialized } = useFoodItems();
+  const { language } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<FoodItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const tagsScrollRef = useRef<ScrollViewType | null>(null);
+  const hasSelectedItems = selectedFoodItems.length > 0;
+
+  const scrollTagsToEnd = useCallback(() => {
+    requestAnimationFrame(() => {
+      tagsScrollRef.current?.scrollToEnd({ animated: true });
+    });
+  }, []);
+
+  const handleChangeText = (value: string) => {
+    setSearchQuery(value);
+  };
 
   // Rechercher les suggestions quand la requête change
   useEffect(() => {
@@ -61,20 +78,35 @@ export function SearchBarWithTags({
     setShowSuggestions(filteredSuggestions.length > 0);
   }, [searchQuery, selectedFoodItems, searchFoodItems, isInitialized]);
 
+  useEffect(() => {
+    if (selectedFoodItems.length === 0) {
+      return;
+    }
+    scrollTagsToEnd();
+  }, [selectedFoodItems.length, scrollTagsToEnd]);
+
   const handleSelectFoodItem = (foodItem: FoodItem) => {
     // Ajouter le food_item sélectionné
     onFoodItemsChange([...selectedFoodItems, foodItem]);
     setSearchQuery('');
     setShowSuggestions(false);
     inputRef.current?.blur();
+    scrollTagsToEnd();
   };
 
   const handleRemoveFoodItem = (foodItemId: string) => {
     onFoodItemsChange(selectedFoodItems.filter((item) => item.id !== foodItemId));
+    setSearchQuery('');
   };
 
+  const getDisplayName = (foodItem: FoodItem) =>
+    language === 'en' && foodItem.name_en ? foodItem.name_en : foodItem.name;
+
   const renderTag = (foodItem: FoodItem) => (
-    <View key={foodItem.id} style={[styles.tag, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View
+      key={foodItem.id}
+      style={[styles.tag, { backgroundColor: colors.card, borderColor: colors.border }]}
+    >
       {foodItem.image_url && (
         <ExpoImage
           source={{ uri: foodItem.image_url }}
@@ -83,7 +115,7 @@ export function SearchBarWithTags({
         />
       )}
       <Text style={[styles.tagText, { color: colors.text }]} numberOfLines={1}>
-        {foodItem.name}
+        {getDisplayName(foodItem)}
       </Text>
       <TouchableOpacity
         onPress={() => handleRemoveFoodItem(foodItem.id)}
@@ -114,54 +146,54 @@ export function SearchBarWithTags({
         <View style={[styles.suggestionImagePlaceholder, { backgroundColor: colors.secondary }]} />
       )}
       <Text style={[styles.suggestionText, { color: colors.text }]} numberOfLines={1}>
-        {item.name}
+        {getDisplayName(item)}
       </Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      {/* Barre de recherche */}
-      <View style={[styles.searchBarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Search size={18} color={colors.icon} style={styles.searchIcon} />
-        <TextInput
-          ref={inputRef}
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.icon}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onFocus={() => {
-            if (suggestions.length > 0) {
-              setShowSuggestions(true);
-            }
-          }}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-
-      <View
-        style={[
-          styles.tagsWrapper,
-          !(selectedFoodItems.length > 0 || (showSuggestions && suggestions.length > 0)) && { marginTop: 0 },
-        ]}
-      >
-        {/* Tags des food_items sélectionnés */}
-        {selectedFoodItems.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {selectedFoodItems.map(renderTag)}
+      <View style={styles.searchWrapper}>
+        {/* Barre de recherche */}
+        <View
+          style={[styles.searchBarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Search size={18} color={colors.icon} style={styles.searchIcon} />
+          <View style={styles.inputContentWrapper}>
+            <ScrollView
+              ref={tagsScrollRef}
+              style={styles.tagsScroll}
+              contentContainerStyle={styles.searchBarContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+            >
+              {selectedFoodItems.map(renderTag)}
+              <TextInput
+                ref={inputRef}
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder={hasSelectedItems ? '' : placeholder}
+                placeholderTextColor={colors.icon}
+                value={searchQuery}
+                onChangeText={handleChangeText}
+                onFocus={() => {
+                  if (suggestions.length > 0) {
+                    setShowSuggestions(true);
+                  }
+                  scrollTagsToEnd();
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+            </ScrollView>
           </View>
-        )}
+        </View>
 
         {/* Suggestions */}
         {showSuggestions && suggestions.length > 0 && (
           <View
-            style={[
-              styles.suggestionsContainer,
-              styles.suggestionsOverlay,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
+            style={[styles.suggestionsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
             <ScrollView
               keyboardShouldPersistTaps="handled"
@@ -182,18 +214,19 @@ export function SearchBarWithTags({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.md,
+
   },
-  tagsWrapper: {
+  searchWrapper: {
     position: 'relative',
-    marginTop: Spacing.sm,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+  inputContentWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  tagsScroll: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: TAGS_MAX_HEIGHT,
   },
   tag: {
     flexDirection: 'row',
@@ -204,6 +237,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     maxWidth: '100%',
+    marginRight: Spacing.xs,
+    marginBottom: Spacing.xs,
   },
   tagImage: {
     width: 20,
@@ -222,39 +257,49 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     minHeight: 50,
   },
   searchInput: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 120,
     fontSize: 16,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    alignSelf: 'center',
+    textAlignVertical: 'center',
   },
   searchIcon: {
     marginRight: Spacing.sm,
+    alignSelf: 'center',
+  },
+  searchBarContent: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    paddingBottom: Spacing.xs,
   },
   suggestionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
     marginTop: Spacing.xs,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     maxHeight: 200,
     overflow: 'hidden',
-  },
-  suggestionsOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    marginTop: 0,
-    zIndex: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.16,
     shadowRadius: 16,
     elevation: 8,
+    zIndex: 20,
   },
   suggestionItem: {
     flexDirection: 'row',

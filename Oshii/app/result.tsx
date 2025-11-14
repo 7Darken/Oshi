@@ -24,6 +24,7 @@ import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { FullRecipe } from '@/types/recipe';
 import { convertIngredient } from '@/utils/ingredientConverter';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
@@ -32,16 +33,16 @@ import * as Sharing from 'expo-sharing';
 import { ArrowLeft, Bookmark, Clock, Flame, Folder, Minus, Play, Plus, Scale, Share2, ShoppingCart, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Linking,
-  Platform,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Linking,
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
@@ -49,6 +50,7 @@ const HERO_IMAGE_HEIGHT = 400;
 
 export default function ResultScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ recipeId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -89,6 +91,11 @@ export default function ResultScreen() {
       }),
     [scrollY]
   );
+
+  const inactiveFooterButtonBackground =
+    colorScheme === 'dark' ? 'rgba(30, 30, 30, 0.6)' : 'rgba(255, 255, 255, 0.95)';
+  const inactiveFooterButtonBorder =
+    colorScheme === 'dark' ? colors.primary : 'rgba(239, 68, 68, 0.35)';
 
   const heroScale = useMemo(
     () =>
@@ -518,6 +525,26 @@ export default function ResultScreen() {
     }
   }, [recipe, user, t]);
 
+  const handleStartCooking = useCallback(() => {
+    if (!recipe || !recipe.steps || recipe.steps.length === 0) {
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {
+        /* noop */
+      });
+    }
+
+    const recipeId = params.recipeId || recipe.id || currentRecipe?.id;
+
+    if (recipeId) {
+      router.push(`/steps?recipeId=${recipeId}` as any);
+    } else {
+      router.push('/steps' as any);
+    }
+  }, [recipe, params.recipeId, currentRecipe?.id, router]);
+
   // Ne rien afficher si en chargement
   if (isLoading || !recipe) {
     return (
@@ -668,12 +695,22 @@ export default function ResultScreen() {
 
       console.log('✅ [Result] Recette supprimée avec succès');
       setShowDeleteConfirm(false);
-      
-      // Rediriger vers la home
-      router.replace('/(tabs)');
+
+      // Vider toute la stack de navigation et revenir à la home
+      // Cela empêche l'utilisateur de revenir en arrière vers la page folder ou result supprimée
+      console.log('🔄 [Result] Reset complet de la navigation vers home');
+
+      // Utiliser React Navigation pour réinitialiser complètement la stack
+      // Cela garantit qu'il n'y a plus de pages folder/result dans l'historique
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: '(tabs)' }],
+        })
+      );
     } catch (err: any) {
       console.error('❌ [Result] Erreur:', err);
-      // TODO: Afficher une alerte d'erreur
+      Alert.alert(t('recipe.deleteError'), t('recipe.deleteErrorMessage'));
     } finally {
       setIsDeleting(false);
     }
@@ -1093,7 +1130,28 @@ export default function ResultScreen() {
 
           {/* Section Étapes */}
           <View style={styles.section}>
-            <Card>
+            <Card style={styles.stepsCard}>
+              {recipe.steps && recipe.steps.length > 0 && (
+                <TouchableOpacity
+                  onPress={handleStartCooking}
+                  style={[
+                    styles.stepsFloatingButton,
+                    {
+                      backgroundColor:
+                        colorScheme === 'dark'
+                          ? 'rgba(249, 64, 60, 0.28)'
+                          : 'rgba(249, 92, 89, 0.16)',
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('recipe.cook')}
+                >
+                  <Play size={18} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
+                </TouchableOpacity>
+              )}
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 {t('recipe.steps')}
               </Text>
@@ -1154,20 +1212,7 @@ export default function ResultScreen() {
             {/* Bouton Play pour ouvrir les étapes - À gauche */}
             {recipe.steps && recipe.steps.length > 0 && (
               <TouchableOpacity
-                onPress={() => {
-                  // Retour haptique fort sur iOS
-                  if (Platform.OS === 'ios') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                  }
-
-                  const recipeId = params.recipeId || (currentRecipe?.id as string);
-                  if (recipeId) {
-                    router.push(`/steps?recipeId=${recipeId}` as any);
-                  } else {
-                    // Si pas de recipeId, passer les données via le store temporairement
-                    router.push('/steps' as any);
-                  }
-                }}
+                onPress={handleStartCooking}
                 style={[
                   styles.playButton,
                   {
@@ -1189,9 +1234,9 @@ export default function ResultScreen() {
                   style={[
                     styles.addToCartButton,
                     {
-                      backgroundColor: 'rgba(30, 30, 30, 0.6)',
+                      backgroundColor: inactiveFooterButtonBackground,
                       borderWidth: 1.5,
-                      borderColor: colors.primary,
+                      borderColor: inactiveFooterButtonBorder,
                     }
                   ]}
                   activeOpacity={0.8}
@@ -1212,9 +1257,9 @@ export default function ResultScreen() {
                   styles.saveButton,
                   !currentFolder
                     ? {
-                        backgroundColor: 'rgba(30, 30, 30, 0.6)',
+                        backgroundColor: inactiveFooterButtonBackground,
                         borderWidth: 1.5,
-                        borderColor: colors.primary,
+                        borderColor: inactiveFooterButtonBorder,
                       }
                     : { backgroundColor: colors.primary },
                 ]}
@@ -1533,10 +1578,34 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: Spacing.lg,
     paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  stepsCard: {
+    position: 'relative',
+    paddingTop: Spacing.lg,
+  },
+  stepsFloatingButton: {
+    position: 'absolute',
+    top: -Spacing.xl,
+    right: -5,
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
+    marginBottom: Spacing.md,
   },
   emptyText: {
     fontSize: 14,

@@ -89,7 +89,8 @@
       "placeholder": "https://www.tiktok.com/@...",
       "errors": {
         "empty": "Veuillez saisir une URL valide",
-        "invalid": "Format d'URL invalide"
+        "invalid": "Format d'URL invalide",
+        "unsupported": "Utilisez TikTok, Instagram Reels ou YouTube Shorts."
       }
     },
     "button": {
@@ -113,6 +114,7 @@
         "title": "Erreur",
         "message": "Impossible de lire le presse-papiers"
       }
-    }
+    },
+    "helpButton": "Aide"
   }
 }

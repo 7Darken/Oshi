@@ -69,12 +69,43 @@
     "premium": {
       "upgrade": "Upgrade to Oshii Pro",
       "unlockFeatures": "Unlock all features",
+      "activeTitle": "Oshii Pro is active",
+      "activeDescription": "Thanks for supporting Oshii. Enjoy every premium feature.",
+      "activeBadge": "Active",
       "title": "Oshii Pro",
       "features": {
         "unlimitedGenerations": "Unlimited generations",
         "customRecipes": "Custom recipes",
         "prioritySupport": "Priority support"
       }
+    },
+    "stats": {
+      "totalRecipes": "Recipes generated",
+      "favouriteMeals": "Favourite meals",
+      "sharedRecipes": "Recipes shared",
+      "streak": "Activity streak",
+      "startNow": "Start today",
+      "daysSuffix": "d"
+    },
+    "platformStats": {
+      "title": "My created recipes",
+      "total": "Recipes",
+      "empty": "Analyse a recipe to see the breakdown",
+      "loading": "Loading statistics...",
+      "tiktok": "TikTok",
+      "instagram": "Instagram",
+      "youtube": "YouTube",
+      "others": "Others",
+      "shareAction": "Share",
+      "shareMessage": "I'm creating my recipes with Oshii! ",
+      "totalShared": "{{total}} recipes created",
+      "unavailable": "Statistics are available after 3 recipes.",
+      "recipesTitle": "Recipes created",
+      "recipesSubtitle": "recipes",
+      "dietsTitle": "My diets",
+      "noDiets": "No favourite diets",
+      "favoriteCuisine": "Favourite cuisine",
+      "totalCookingTime": "Cooking time"
     },
     "footer": {
       "version": "Oshii v{{version}}",

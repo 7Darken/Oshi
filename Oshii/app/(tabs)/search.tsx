@@ -2,16 +2,17 @@
  * Onglet Recherche - Rechercher des recettes par ingrédient
  */
 
+import { MealTypeFilterBar } from '@/components/MealTypeFilterBar';
 import { RecipeFilterSheet } from '@/components/RecipeFilterSheet';
 import { SearchBarWithTags } from '@/components/SearchBarWithTags';
 import { Card } from '@/components/ui/Card';
-import type { DietType, MealType } from '@/constants/recipeCategories';
+import type { CuisineOrigin, DietType, MealType } from '@/constants/recipeCategories';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
-import { useSharedRecipeIds } from '@/hooks/useSharedRecipeIds';
 import { useSearchTranslation } from '@/hooks/useI18n';
+import { useSharedRecipeIds } from '@/hooks/useSharedRecipeIds';
 import { supabase } from '@/services/supabase';
 import { FoodItem } from '@/stores/useFoodItemsStore';
 import { Image as ExpoImage } from 'expo-image';
@@ -48,6 +49,7 @@ interface SearchRecipe {
   servings: number | null;
   meal_type: MealType | null;
   diet_type: DietType[] | null;
+  cuisine_origin: string | null;
   platform?: 'Tiktok' | 'Instagram' | 'YouTube' | null;
 }
 
@@ -140,6 +142,7 @@ export default function SearchScreen() {
   const [isFilterSheetVisible, setIsFilterSheetVisible] = useState(false);
   const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>([]);
   const [selectedDietTypes, setSelectedDietTypes] = useState<DietType[]>([]);
+  const [selectedCuisineOrigins, setSelectedCuisineOrigins] = useState<CuisineOrigin[]>([]);
   const [recentRecipes, setRecentRecipes] = useState<SearchRecipe[]>([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const previousRecipeIdsRef = useRef<Set<string>>(new Set());
@@ -149,17 +152,23 @@ export default function SearchScreen() {
   const recentRecipesRequestedRef = useRef(false);
 
   const hasActiveFilters = useMemo(
-    () => selectedMealTypes.length > 0 || selectedDietTypes.length > 0,
-    [selectedDietTypes.length, selectedMealTypes.length],
+    () =>
+      selectedMealTypes.length > 0 ||
+      selectedDietTypes.length > 0 ||
+      selectedCuisineOrigins.length > 0,
+    [selectedDietTypes.length, selectedMealTypes.length, selectedCuisineOrigins.length],
   );
 
-  // Rechercher des recettes basées sur les food_items sélectionnés
+  // Rechercher des recettes basées sur les food_items sélectionnés et/ou filtres
   useEffect(() => {
     const searchRecipes = async () => {
       if (!user?.id || !foodItemsReady) return;
 
-      // Ne rien faire si aucun food_item n'est sélectionné
-      if (selectedFoodItems.length === 0) {
+      const hasFilters = hasActiveFilters;
+      const hasFoodItems = selectedFoodItems.length > 0;
+
+      // Ne rien faire si aucun food_item n'est sélectionné ET aucun filtre actif
+      if (!hasFoodItems && !hasFilters) {
         setRecipes([]);
         previousRecipeIdsRef.current = new Set();
         previousRecipesRef.current = [];
@@ -169,43 +178,51 @@ export default function SearchScreen() {
 
       setIsLoading(true);
       try {
-        const foodItemIds = selectedFoodItems.map((item) => item.id);
+        let recipeIds: string[] = [];
 
-        // Pour chaque food_item, récupérer les recipe_ids qui l'ont
-        // On veut les recettes qui ont TOUS les food_items sélectionnés
-        const recipeIdSets: Set<string>[] = [];
+        // Si des food items sont sélectionnés, filtrer par ingrédients
+        if (hasFoodItems) {
+          const foodItemIds = selectedFoodItems.map((item) => item.id);
 
-        for (const foodItemId of foodItemIds) {
-          const { data: ingredients, error: ingredientsError } = await supabase
-            .from('ingredients')
-            .select('recipe_id')
-            .eq('food_item_id', foodItemId);
+          // Pour chaque food_item, récupérer les recipe_ids qui l'ont
+          // On veut les recettes qui ont TOUS les food_items sélectionnés
+          const recipeIdSets: Set<string>[] = [];
 
-          if (ingredientsError) {
-            console.error('❌ Erreur lors de la recherche d\'ingrédients:', ingredientsError);
-            setIsLoading(false);
-            return;
+          for (const foodItemId of foodItemIds) {
+            const { data: ingredients, error: ingredientsError } = await supabase
+              .from('ingredients')
+              .select('recipe_id')
+              .eq('food_item_id', foodItemId);
+
+            if (ingredientsError) {
+              console.error('❌ Erreur lors de la recherche d\'ingrédients:', ingredientsError);
+              setIsLoading(false);
+              return;
+            }
+
+            const recipeIdsSet = new Set(ingredients?.map(ing => ing.recipe_id) || []);
+            recipeIdSets.push(recipeIdsSet);
           }
 
-          const recipeIds = new Set(ingredients?.map(ing => ing.recipe_id) || []);
-          recipeIdSets.push(recipeIds);
+          // Intersection de tous les sets (recettes qui ont tous les food_items)
+          let intersection = recipeIdSets[0];
+          for (let i = 1; i < recipeIdSets.length; i++) {
+            intersection = new Set([...intersection].filter(id => recipeIdSets[i].has(id)));
+          }
+
+          recipeIds = Array.from(intersection);
         }
 
-        // Intersection de tous les sets (recettes qui ont tous les food_items)
-        let intersection = recipeIdSets[0];
-        for (let i = 1; i < recipeIdSets.length; i++) {
-          intersection = new Set([...intersection].filter(id => recipeIdSets[i].has(id)));
-        }
-
-        const recipeIds = Array.from(intersection);
         const newRecipeIdsSet = new Set(recipeIds);
         const filterSignature = JSON.stringify({
           meal: [...selectedMealTypes].sort(),
           diet: [...selectedDietTypes].sort(),
+          cuisine: [...selectedCuisineOrigins].sort(),
+          hasFoodItems,
         });
 
         // Comparer avec les recettes précédentes pour éviter les re-renders inutiles
-        const hasSameRecipes = 
+        const hasSameRecipes =
           previousRecipeIdsRef.current.size === newRecipeIdsSet.size &&
           Array.from(previousRecipeIdsRef.current).every(id => newRecipeIdsSet.has(id));
 
@@ -220,7 +237,8 @@ export default function SearchScreen() {
           return;
         }
 
-        if (recipeIds.length === 0) {
+        // Si recherche par ingrédients mais aucune recette trouvée
+        if (hasFoodItems && recipeIds.length === 0) {
           setRecipes([]);
           previousRecipeIdsRef.current = new Set();
           previousRecipesRef.current = [];
@@ -230,22 +248,25 @@ export default function SearchScreen() {
 
         // Identifier les recettes à garder et les nouvelles à ajouter
         const recipesToKeep: SearchRecipe[] = [];
-        const newRecipeIds = recipeIds.filter(id => !previousRecipeIdsRef.current.has(id));
+        const newRecipeIds = hasFoodItems
+          ? recipeIds.filter(id => !previousRecipeIdsRef.current.has(id))
+          : [];
 
         // Garder les recettes qui sont toujours présentes (même référence d'objet = pas de re-render)
         previousRecipesRef.current.forEach(recipe => {
-          if (newRecipeIdsSet.has(recipe.id)) {
+          if (hasFoodItems && newRecipeIdsSet.has(recipe.id)) {
             recipesToKeep.push(recipe);
           }
         });
 
-        // Récupérer uniquement les nouvelles recettes (celles qui n'étaient pas dans les précédentes)
+        // Récupérer les recettes
         let newRecipes: SearchRecipe[] = [];
 
-        if (newRecipeIds.length > 0) {
+        if (hasFoodItems && newRecipeIds.length > 0) {
+          // Recherche par ingrédients - récupérer uniquement les nouvelles recettes
           const { data: newRecipesData, error: newRecipesError } = await supabase
             .from('recipes')
-            .select('id, title, image_url, total_time, servings, meal_type, diet_type, platform')
+            .select('id, title, image_url, total_time, servings, meal_type, diet_type, cuisine_origin, platform')
             .eq('user_id', user.id)
             .in('id', newRecipeIds)
             .order('created_at', { ascending: false });
@@ -254,6 +275,19 @@ export default function SearchScreen() {
             console.error('❌ Erreur lors de la récupération des nouvelles recettes:', newRecipesError);
           } else if (newRecipesData) {
             newRecipes = newRecipesData as SearchRecipe[];
+          }
+        } else if (!hasFoodItems && hasFilters) {
+          // Filtres uniquement - récupérer toutes les recettes de l'utilisateur
+          const { data: allRecipesData, error: allRecipesError } = await supabase
+            .from('recipes')
+            .select('id, title, image_url, total_time, servings, meal_type, diet_type, cuisine_origin, platform')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (allRecipesError) {
+            console.error('❌ Erreur lors de la récupération de toutes les recettes:', allRecipesError);
+          } else if (allRecipesData) {
+            newRecipes = allRecipesData as SearchRecipe[];
           }
         }
 
@@ -267,17 +301,20 @@ export default function SearchScreen() {
             (recipe.diet_type || []).some((value) =>
               selectedDietTypes.includes(value),
             );
+          const cuisineMatch =
+            selectedCuisineOrigins.length === 0 ||
+            (recipe.cuisine_origin ? selectedCuisineOrigins.includes(recipe.cuisine_origin as CuisineOrigin) : false);
 
-          return mealMatch && dietMatch;
+          return mealMatch && dietMatch && cuisineMatch;
         };
 
         const filteredRecipesToKeep = recipesToKeep.filter(matchesFilters);
         const filteredNewRecipes = newRecipes.filter(matchesFilters);
 
         const finalRecipes = [...filteredRecipesToKeep, ...filteredNewRecipes];
-        
+
         // Vérifier si le tableau a vraiment changé (par référence)
-        const hasChanged = 
+        const hasChanged =
           finalRecipes.length !== previousRecipesRef.current.length ||
           finalRecipes.some((recipe, index) => recipe.id !== previousRecipesRef.current[index]?.id);
 
@@ -286,7 +323,7 @@ export default function SearchScreen() {
           setRecipes(finalRecipes);
           previousRecipesRef.current = finalRecipes;
         }
-        
+
         previousRecipeIdsRef.current = newRecipeIdsSet;
         previousFilterSignatureRef.current = filterSignature;
       } catch (error) {
@@ -307,6 +344,8 @@ export default function SearchScreen() {
     foodItemsReady,
     selectedMealTypes,
     selectedDietTypes,
+    selectedCuisineOrigins,
+    hasActiveFilters,
   ]);
 
   useEffect(() => {
@@ -338,7 +377,7 @@ export default function SearchScreen() {
       try {
         let query = supabase
           .from('recipes')
-          .select('id, title, image_url, total_time, servings, meal_type, diet_type, platform')
+          .select('id, title, image_url, total_time, servings, meal_type, diet_type, cuisine_origin, platform')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -406,7 +445,9 @@ export default function SearchScreen() {
   }, []);
 
   const toggleMealType = useCallback((value: MealType) => {
-    setSelectedMealTypes((prev) => (prev.includes(value) ? [] : [value]));
+    setSelectedMealTypes((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+    );
   }, []);
 
   const toggleDietType = useCallback((value: DietType) => {
@@ -415,9 +456,16 @@ export default function SearchScreen() {
     );
   }, []);
 
+  const toggleCuisineOrigin = useCallback((value: CuisineOrigin) => {
+    setSelectedCuisineOrigins((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+    );
+  }, []);
+
   const resetFilters = useCallback(() => {
     setSelectedMealTypes([]);
     setSelectedDietTypes([]);
+    setSelectedCuisineOrigins([]);
   }, []);
 
   const activeFilterTagColors = useMemo(() => {
@@ -473,6 +521,11 @@ export default function SearchScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <MealTypeFilterBar
+          selectedMealTypes={selectedMealTypes}
+          onToggleMealType={toggleMealType}
+        />
 
         {/* Results */}
         {isLoading ? (
@@ -557,8 +610,10 @@ export default function SearchScreen() {
           onReset={resetFilters}
           onToggleMealType={toggleMealType}
           onToggleDietType={toggleDietType}
+          onToggleCuisineOrigin={toggleCuisineOrigin}
           selectedMealTypes={selectedMealTypes}
           selectedDietTypes={selectedDietTypes}
+          selectedCuisineOrigins={selectedCuisineOrigins}
         />
         </View>
       </TouchableWithoutFeedback>

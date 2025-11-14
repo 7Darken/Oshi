@@ -3,8 +3,8 @@
  * Appel simple et propre vers le backend Express
  */
 
-import Constants from 'expo-constants';
 import { Recipe } from '@/types/recipe';
+import Constants from 'expo-constants';
 
 // Récupération de l'URL du backend depuis expo-constants
 const { BACKEND_URL } = Constants.expoConfig?.extra || {};
@@ -18,6 +18,7 @@ export interface AnalyzeOptions {
   signal?: AbortSignal;
   timeout?: number;
   token?: string; // Token JWT optionnel
+  language?: string; // Langue préférée de l'utilisateur (fr, en, etc.)
 }
 
 export interface ApiResponse {
@@ -26,6 +27,28 @@ export interface ApiResponse {
   error?: string;
   message?: string;
   userMessage?: string;
+}
+
+export interface UserStatsResponse {
+  success: boolean;
+  stats?: {
+    totalRecipes: number;
+    recipesByPlatform: Array<{
+      platform: string;
+      count: number;
+    }>;
+    totalCookTime: {
+      hours: number;
+      minutes: number;
+    };
+    topCuisineOrigin: string | null;
+    topDietTypes: Array<{
+      diet: string;
+      count: number;
+    }>;
+  };
+  error?: string;
+  message?: string;
 }
 
 /**
@@ -116,12 +139,21 @@ export async function analyzeRecipe(
 
   try {
     console.log('📡 [API] Appel au backend en cours...');
+
+    // Préparer le corps de la requête avec la langue si disponible
+    const requestBody: { url: string; language?: string } = {
+      url: tiktokUrl,
+    };
+
+    if (options?.language) {
+      requestBody.language = options.language;
+      console.log(`🌍 [API] Langue utilisateur: ${options.language}`);
+    }
+console.log(JSON.stringify(requestBody), 'requestBody');
     const response = await fetch(`${API_BASE_URL}/analyze`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        url: tiktokUrl,
-      }),
+      body: JSON.stringify(requestBody),
       signal,
     });
 
@@ -146,9 +178,7 @@ export async function analyzeRecipe(
           const retryResponse = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-              url: tiktokUrl,
-            }),
+            body: JSON.stringify(requestBody),
             signal,
           });
           
@@ -216,8 +246,114 @@ export async function analyzeRecipe(
     if (error instanceof NotRecipeError) {
       throw error;
     }
-    
+
     console.error('❌ [API] Erreur lors de l\'appel au backend:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère les statistiques utilisateur depuis le backend
+ * @param token - Token JWT de l'utilisateur
+ * @param options - Options incluant signal d'annulation et fonctions de refresh
+ * @returns Promise<UserStatsResponse['stats']> - Statistiques de l'utilisateur
+ */
+export async function getUserStats(
+  token: string,
+  options?: {
+    signal?: AbortSignal;
+    getToken?: () => string | null;
+    refreshSession?: () => Promise<void>;
+  }
+): Promise<UserStatsResponse['stats']> {
+  console.log('🚀 [API] Récupération des statistiques utilisateur');
+
+  if (!BACKEND_URL && !API_BASE_URL) {
+    throw new Error('BACKEND_URL non définie dans le fichier .env');
+  }
+
+  const signal = options?.signal;
+
+  // Récupérer un token valide (avec refresh automatique si nécessaire)
+  let validToken = token;
+  if (!validToken && options?.getToken && options?.refreshSession) {
+    const refreshedToken = await getValidToken(options.getToken, options.refreshSession);
+    validToken = refreshedToken || token;
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${validToken}`,
+  };
+
+  try {
+    console.log('📡 [API] Appel à /user/stats...');
+
+    const response = await fetch(`${API_BASE_URL}/user/stats`, {
+      method: 'GET',
+      headers,
+      signal,
+    });
+
+    console.log('📥 [API] Réponse stats reçue:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
+    // Si 401 (Unauthorized), essayer de rafraîchir le token et réessayer
+    if (response.status === 401 && options?.getToken && options?.refreshSession) {
+      console.log('🔄 [API] Token expiré (401), rafraîchissement de la session...');
+      try {
+        await options.refreshSession();
+        const newToken = await getValidToken(options.getToken);
+
+        if (newToken && newToken !== validToken) {
+          console.log('✅ [API] Nouveau token obtenu, nouvelle tentative...');
+          headers['Authorization'] = `Bearer ${newToken}`;
+
+          const retryResponse = await fetch(`${API_BASE_URL}/user/stats`, {
+            method: 'GET',
+            headers,
+            signal,
+          });
+
+          if (retryResponse.ok) {
+            const retryData: UserStatsResponse = await retryResponse.json();
+            if (retryData.success && retryData.stats) {
+              console.log('✅ [API] Stats récupérées après rafraîchissement du token');
+              return retryData.stats;
+            }
+          }
+        }
+      } catch (refreshError) {
+        console.error('❌ [API] Erreur lors du rafraîchissement du token:', refreshError);
+      }
+    }
+
+    const data: UserStatsResponse = await response.json();
+    console.log('📦 [API] Stats parsées:', {
+      success: data.success,
+      hasStats: !!data.stats,
+      totalRecipes: data.stats?.totalRecipes,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token manquant ou expiré. Veuillez vous reconnecter.');
+      }
+      throw new Error(data.error || data.message || `Erreur API: ${response.status}`);
+    }
+
+    if (!data.success || !data.stats) {
+      console.error('❌ [API] Réponse stats invalide:', data);
+      throw new Error('Aucune statistique retournée par le backend');
+    }
+
+    console.log('✅ [API] Statistiques récupérées avec succès');
+    return data.stats;
+  } catch (error) {
+    console.error('❌ [API] Erreur lors de la récupération des stats:', error);
     throw error;
   }
 }

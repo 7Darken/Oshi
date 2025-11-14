@@ -14,6 +14,7 @@ import { useRecipeStore } from '@/stores/useRecipeStore';
 import { analyzeRecipe, NotRecipeError } from '@/services/api';
 import { AnalyzeStage } from '@/components/RecipeAnalyzeSkeleton';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useLanguageStore } from '@/stores/useLanguageStore';
 
 export interface AnalyzeLinkOptions {
   onProgress?: (stage: AnalyzeStage) => void;
@@ -21,9 +22,10 @@ export interface AnalyzeLinkOptions {
 
 export function useAnalyzeLink() {
   const { setLoading, setError, setRecipe } = useRecipeStore();
-  const authContext = useAuthContext();
-  const { token, canGenerateRecipe, refreshSession } = authContext;
+  const { token, canGenerateRecipe, refreshSession } = useAuthContext();
+  const { getCurrentLanguage } = useLanguageStore();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Ref pour accéder au token actuel après refresh
   const tokenRef = useRef<string | null>(token);
 
@@ -71,7 +73,12 @@ export function useAnalyzeLink() {
       const stages: AnalyzeStage[] = ['download', 'transcription', 'extraction', 'finalization'];
       let stageIndex = 0;
 
-      const progressInterval = setInterval(() => {
+      // Nettoyer l'interval précédent s'il existe
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+
+      progressIntervalRef.current = setInterval(() => {
         if (stageIndex < stages.length - 1) {
           stageIndex++;
           options?.onProgress?.(stages[stageIndex]);
@@ -79,10 +86,15 @@ export function useAnalyzeLink() {
       }, 3000); // Changer de stage toutes les 3 secondes
 
       try {
-        // Appeler le backend API avec le token JWT et les fonctions de refresh
+        // Récupérer la langue actuelle de l'utilisateur
+        const userLanguage = getCurrentLanguage();
+        console.log('🌍 [Hook] Langue utilisateur:', userLanguage);
+
+        // Appeler le backend API avec le token JWT, la langue et les fonctions de refresh
         const recipe = await analyzeRecipe(url.trim(), {
           signal: abortController.signal,
           token: token || undefined,
+          language: userLanguage, // Envoyer la langue au backend
           getToken: () => {
             // Récupérer le token depuis le ref (sera mis à jour après refresh)
             return tokenRef.current;
@@ -92,12 +104,15 @@ export function useAnalyzeLink() {
             await refreshSession();
             // Attendre un peu pour que le contexte se mette à jour
             await new Promise(resolve => setTimeout(resolve, 100));
-            // Mettre à jour le ref avec le nouveau token
-            tokenRef.current = authContext.token;
+            // Le tokenRef sera mis à jour automatiquement via le useEffect
           },
         });
 
-        clearInterval(progressInterval);
+        // Nettoyer l'interval de progression
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
 
         // Finalisation
         console.log('✨ [Hook] Analyse terminée avec succès');
@@ -133,7 +148,11 @@ export function useAnalyzeLink() {
           setLoading(false);
         }
       } catch (error) {
-        clearInterval(progressInterval);
+        // Nettoyer l'interval de progression
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
         
         // Ne pas traiter les erreurs si la requête a été annulée
         if (error instanceof Error && error.name === 'AbortError') {
@@ -167,7 +186,7 @@ export function useAnalyzeLink() {
         console.log('🏁 [Hook] Nettoyage terminé');
       }
     },
-    [setLoading, setError, setRecipe, token, canGenerateRecipe, refreshSession, authContext]
+    [setLoading, setError, setRecipe, token, canGenerateRecipe, refreshSession, getCurrentLanguage]
   );
 
   const cancelAnalysis = useCallback(() => {
@@ -175,6 +194,12 @@ export function useAnalyzeLink() {
       console.log('🚫 [Hook] Annulation de l\'analyse');
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+
+    // Nettoyer l'interval de progression si l'analyse est annulée
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
     }
   }, []);
 

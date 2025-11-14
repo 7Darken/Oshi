@@ -69,12 +69,43 @@
     "premium": {
       "upgrade": "Passer à Oshii Pro",
       "unlockFeatures": "Débloquez toutes les fonctionnalités",
+      "activeTitle": "Oshii Pro activé",
+      "activeDescription": "Merci de soutenir Oshii. Profite de toutes les fonctionnalités.",
+      "activeBadge": "Actif",
       "title": "Oshii Pro",
       "features": {
         "unlimitedGenerations": "Générations illimitées",
         "customRecipes": "Recettes personnalisées",
         "prioritySupport": "Support prioritaire"
       }
+    },
+    "stats": {
+      "totalRecipes": "Recettes générées",
+      "favouriteMeals": "Repas favoris",
+      "sharedRecipes": "Recettes partagées",
+      "streak": "Série d'activité",
+      "startNow": "Commencez aujourd'hui",
+      "daysSuffix": "j"
+    },
+    "platformStats": {
+      "title": "Mes recettes créées",
+      "total": "Recettes",
+      "empty": "Analysez une recette pour voir la répartition",
+      "loading": "Chargement des statistiques...",
+      "tiktok": "TikTok",
+      "instagram": "Instagram",
+      "youtube": "YouTube",
+      "others": "Autres",
+      "shareAction": "Partager",
+      "shareMessage": "Je crée mes recettes avec Oshii",
+      "totalShared": "{{total}} recettes créées",
+      "unavailable": "Les statistiques seront disponibles après 3 recettes.",
+      "recipesTitle": "Recettes créées",
+      "recipesSubtitle": "recettes",
+      "dietsTitle": "Mes régimes",
+      "noDiets": "Aucun régime favori",
+      "favoriteCuisine": "Ma cuisine préférée",
+      "totalCookingTime": "Temps à cuisiner"
     },
     "footer": {
       "version": "Oshii v{{version}}",

@@ -9,22 +9,22 @@ import { Card } from '@/components/ui/Card';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSettingsTranslation } from '@/hooks/useI18n';
-import { useLanguageStore } from '@/stores/useLanguageStore';
+import { useProfileTranslation, useSettingsTranslation } from '@/hooks/useI18n';
 import { initRevenueCat } from '@/services/revenueCat';
+import { useLanguageStore } from '@/stores/useLanguageStore';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Globe, HelpCircle, Info, LogOut, Mail, Moon, Star, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Linking,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Linking,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Purchases from 'react-native-purchases';
 
@@ -41,6 +41,7 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
   const { deleteAccount, isPremium } = useAuthContext();
   const router = useRouter();
   const { t } = useSettingsTranslation();
+  const { t: tProfile } = useProfileTranslation();
   const { preferredLanguage } = useLanguageStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -205,27 +206,44 @@ export function SettingsSheet({ visible, onClose, onLogout, user }: SettingsShee
         >
           {/* Container Abonnement Premium - Visible uniquement si premium */}
           {isPremium && (
-            <TouchableOpacity
-              onPress={handleManageSubscription}
-              activeOpacity={0.7}
-            >
-              <Card style={styles.optionCard}>
+            <>
+              <Card style={[styles.optionCard, styles.premiumActiveCard]}>
                 <View style={styles.optionContent}>
-                  <View style={[styles.iconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                  <View style={[styles.iconContainer, styles.premiumIconBackground]}>
                     <Star size={20} color={colors.primary} fill={colors.primary} />
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={[styles.optionTitle, { color: colors.text }]}>
-                      {t('settings.premium')}
+                      {tProfile('profile.premium.activeTitle')}
                     </Text>
                     <Text style={[styles.optionDescription, { color: colors.icon }]}>
-                      {t('settings.managePremium')}
+                      {tProfile('profile.premium.activeDescription')}
                     </Text>
                   </View>
-                  <ChevronRight size={20} color={colors.icon} />
+                  <View style={styles.premiumActivePill}>
+                    <Text style={styles.premiumActivePillText}>{tProfile('profile.premium.activeBadge')}</Text>
+                  </View>
                 </View>
               </Card>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={handleManageSubscription} activeOpacity={0.7}>
+                <Card style={styles.optionCard}>
+                  <View style={styles.optionContent}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.card }]}>
+                      <Star size={20} color={colors.primary} />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[styles.optionTitle, { color: colors.text }]}>
+                        {t('settings.premium')}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: colors.icon }]}>
+                        {t('settings.managePremium')}
+                      </Text>
+                    </View>
+                    <ChevronRight size={20} color={colors.icon} />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            </>
           )}
 
           {/* Container Email */}
@@ -394,6 +412,10 @@ const styles = StyleSheet.create({
   optionCard: {
     marginBottom: Spacing.md,
   },
+  premiumActiveCard: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
   optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,6 +427,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
+  },
+  premiumIconBackground: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
+  premiumActivePill: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  premiumActivePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(239, 68, 68, 1)',
+    textTransform: 'uppercase',
   },
   optionTextContainer: {
     flex: 1,

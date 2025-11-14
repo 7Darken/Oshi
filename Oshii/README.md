@@ -47,6 +47,9 @@ Transformez vos vidéos TikTok culinaires en recettes exploitables et lisibles i
    ```bash
    npx expo start
    ```
+   ```bash
+   npx expo run:ios
+   ```
 
    Ou avec cache nettoyé (recommandé) :
 
@@ -63,6 +66,10 @@ Transformez vos vidéos TikTok culinaires en recettes exploitables et lisibles i
 ## 📁 Structure du projet
 
 ```
+
+## 📚 Documentation frontend
+
+L'ensemble des guides et fiches techniques frontend est désormais regroupé dans `docs/frontend`. Consulte ce dossier pour trouver les notes sur les écrans, intégrations natives (Live Activities, Friends, etc.), localisations ou correctifs spécifiques iOS.
 Oshii/
 ├── app/                    # Écrans (Expo Router)
 │   ├── index.tsx          # Écran d'accueil (HomeScreen)

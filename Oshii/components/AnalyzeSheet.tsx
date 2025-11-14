@@ -10,10 +10,11 @@ import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCommonTranslation } from '@/hooks/useI18n';
+import { TutorialSheet } from '@/components/TutorialSheet';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Clipboard as ClipboardIcon, Sparkles, X } from 'lucide-react-native';
+import { Clipboard as ClipboardIcon, HelpCircle, Sparkles, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -30,6 +31,29 @@ import {
   type KeyboardEvent,
 } from 'react-native';
 
+const isSupportedVideoUrl = (parsedUrl: URL): boolean => {
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const pathname = parsedUrl.pathname.toLowerCase();
+
+  if (hostname === 'youtu.be') {
+    return pathname.startsWith('/shorts/');
+  }
+
+  if (hostname.endsWith('youtube.com') || hostname.endsWith('youtube-nocookie.com')) {
+    return pathname.startsWith('/shorts/');
+  }
+
+  if (hostname.endsWith('instagram.com')) {
+    return pathname.startsWith('/reel') || pathname.startsWith('/reels/');
+  }
+
+  if (hostname.endsWith('tiktok.com')) {
+    return true;
+  }
+
+  return false;
+};
+
 interface AnalyzeSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -40,6 +64,7 @@ interface AnalyzeSheetProps {
 export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: AnalyzeSheetProps) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -81,14 +106,21 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
   }, [shiftAnim]);
 
   const handleAnalyze = () => {
-    if (!url || url.trim().length === 0) {
+    const normalizedUrl = url.trim();
+
+    if (!normalizedUrl) {
       setError(t('analyzeSheet.input.errors.empty'));
       return;
     }
 
     // Validation basique d'URL
     try {
-      new URL(url.trim());
+      const parsedUrl = new URL(normalizedUrl);
+
+      if (!isSupportedVideoUrl(parsedUrl)) {
+        setError(t('analyzeSheet.input.errors.unsupported'));
+        return;
+      }
     } catch {
       setError(t('analyzeSheet.input.errors.invalid'));
       return;
@@ -102,8 +134,8 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
     }
 
     setError(null);
-    onAnalyze(url.trim());
-    
+    onAnalyze(normalizedUrl);
+
     // Clear l'input après avoir lancé l'analyse
     setUrl('');
   };
@@ -257,6 +289,17 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            style={[styles.helpButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+            onPress={() => setShowTutorial(true)}
+            activeOpacity={0.85}
+          >
+            <HelpCircle size={16} color={colors.text} />
+            <Text style={[styles.helpButtonText, { color: colors.text }]}>
+              {t('analyzeSheet.helpButton')}
+            </Text>
+          </TouchableOpacity>
+
           {/* Button */}
           <View style={styles.buttonContainer}>
             <Button
@@ -271,6 +314,8 @@ export function AnalyzeSheet({ visible, onClose, onAnalyze, isLoading }: Analyze
           </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>
+
+      <TutorialSheet visible={showTutorial} onClose={() => setShowTutorial(false)} />
     </Modal>
   );
 }
@@ -427,6 +472,21 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 'auto',
     marginBottom: Spacing.xl,
+  },
+  helpButton: {
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  helpButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

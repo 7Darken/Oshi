@@ -6,9 +6,9 @@
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFoodItems } from '@/hooks/useFoodItems';
-import { useRecipeStepsLiveActivity } from '@/hooks/useRecipeStepsLiveActivity';
 import { useRecipeTranslation } from '@/hooks/useI18n';
 import { FullRecipe } from '@/hooks/useRecipes';
+import { useRecipeStepsLiveActivity } from '@/hooks/useRecipeStepsLiveActivity';
 import { supabase } from '@/services/supabase';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import { Ingredient, Step as StepType } from '@/types/recipe';
@@ -56,7 +56,13 @@ export default function StepsScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   // Live Activity pour afficher l'étape sur l'écran verrouillé
-  const liveActivity = useRecipeStepsLiveActivity(recipe?.title || t('recipe.stepsScreen.defaultRecipeTitle'));
+  const {
+    start: startLiveActivity,
+    update: updateLiveActivity,
+    stop: stopLiveActivity,
+  } = useRecipeStepsLiveActivity(recipe?.title || t('recipe.stepsScreen.defaultRecipeTitle'));
+  const hasStartedLiveActivityRef = useRef(false);
+  const liveActivityRecipeIdRef = useRef<string | null>(null);
 
   // Charger la recette avec ingrédients et étapes
   React.useEffect(() => {
@@ -203,44 +209,85 @@ export default function StepsScreen() {
       return;
     }
 
-    const firstStep = sortedStepsWithIngredients[0];
-    liveActivity.start({
-      currentStep: 1,
-      totalSteps: sortedStepsWithIngredients.length,
-      stepDescription: firstStep.text,
-      stepDuration: firstStep.duration,
-      stepTemperature: firstStep.temperature,
-    });
+    const recipeActivityId = recipe.id ?? null;
+    const shouldRestartForRecipeChange =
+      hasStartedLiveActivityRef.current && liveActivityRecipeIdRef.current !== recipeActivityId;
 
-    // Arrêter la Live Activity quand on quitte l'écran
-    return () => {
-      liveActivity.stop();
+    const ensureLiveActivityRunning = async () => {
+      try {
+        if (shouldRestartForRecipeChange) {
+          await stopLiveActivity();
+          hasStartedLiveActivityRef.current = false;
+        }
+
+        if (!hasStartedLiveActivityRef.current) {
+          const firstStep = sortedStepsWithIngredients[0];
+          await startLiveActivity({
+            currentStep: 1,
+            totalSteps: sortedStepsWithIngredients.length,
+            stepDescription: firstStep.text,
+            stepDuration: firstStep.duration,
+            stepTemperature: firstStep.temperature,
+          });
+
+          hasStartedLiveActivityRef.current = true;
+          liveActivityRecipeIdRef.current = recipeActivityId;
+        }
+      } catch (error) {
+        console.error('❌ [Steps] Live Activity start error:', error);
+      }
     };
-  }, [recipe?.id, sortedStepsWithIngredients.length, isLoading, liveActivity]);
+
+    ensureLiveActivityRunning();
+  }, [
+    recipe?.id,
+    sortedStepsWithIngredients.length,
+    isLoading,
+    startLiveActivity,
+    stopLiveActivity,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (hasStartedLiveActivityRef.current) {
+        stopLiveActivity();
+        hasStartedLiveActivityRef.current = false;
+        liveActivityRecipeIdRef.current = null;
+      }
+    };
+  }, [stopLiveActivity]);
 
   // Mettre à jour la Live Activity quand on scroll vers une nouvelle étape
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0) {
-        const visibleIndex = viewableItems[0].index;
-        if (visibleIndex !== null && visibleIndex !== currentStepIndex) {
-          setCurrentStepIndex(visibleIndex);
+      if (viewableItems.length === 0) {
+        return;
+      }
 
-          const currentStep = sortedStepsWithIngredients[visibleIndex];
-          if (currentStep) {
-            console.log('🔄 [Steps] Mise à jour Live Activity - Étape', visibleIndex + 1);
-            liveActivity.update({
-              currentStep: visibleIndex + 1,
-              totalSteps: sortedStepsWithIngredients.length,
-              stepDescription: currentStep.text,
-              stepDuration: currentStep.duration,
-              stepTemperature: currentStep.temperature,
-            });
-          }
+      const visibleItem = viewableItems
+        .filter((item) => typeof item.index === 'number' && item.isViewable)
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        .pop();
+
+      const visibleIndex = visibleItem?.index ?? null;
+
+      if (visibleIndex !== null && visibleIndex !== currentStepIndex) {
+        setCurrentStepIndex(visibleIndex);
+
+        const currentStep = sortedStepsWithIngredients[visibleIndex];
+        if (currentStep) {
+          console.log('🔄 [Steps] Mise à jour Live Activity - Étape', visibleIndex + 1);
+          updateLiveActivity({
+            currentStep: visibleIndex + 1,
+            totalSteps: sortedStepsWithIngredients.length,
+            stepDescription: currentStep.text,
+            stepDuration: currentStep.duration,
+            stepTemperature: currentStep.temperature,
+          });
         }
       }
     },
-    [currentStepIndex, sortedStepsWithIngredients, liveActivity]
+    [currentStepIndex, sortedStepsWithIngredients, updateLiveActivity]
   );
 
   const viewabilityConfigRef = useRef({

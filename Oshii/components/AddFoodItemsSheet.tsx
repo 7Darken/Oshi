@@ -5,7 +5,7 @@
 import { Button } from '@/components/ui/Button';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useShoppingTranslation } from '@/hooks/useI18n';
+import { useI18n, useShoppingTranslation } from '@/hooks/useI18n';
 import { useFoodItems } from '@/hooks/useFoodItems';
 import { FoodItem } from '@/stores/useFoodItemsStore';
 import { Image as ExpoImage } from 'expo-image';
@@ -51,6 +51,7 @@ export function AddFoodItemsSheet({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { t } = useShoppingTranslation();
+  const { language } = useI18n();
   const { foodItems, searchFoodItems } = useFoodItems();
   const [selectedFoodItemIds, setSelectedFoodItemIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,6 +160,9 @@ export function AddFoodItemsSheet({
                 {/* Items de la catégorie */}
                 {items.map((foodItem) => {
                   const isSelected = selectedFoodItemIds.has(foodItem.id);
+                  const displayName =
+                    language === 'en' && foodItem.name_en ? foodItem.name_en : foodItem.name;
+
                   return (
                     <TouchableOpacity
                       key={foodItem.id}
@@ -194,7 +198,7 @@ export function AddFoodItemsSheet({
 
                       {/* Name */}
                       <Text style={[styles.foodItemName, { color: colors.text }]} numberOfLines={2}>
-                        {capitalizeName(foodItem.name)}
+                        {capitalizeName(displayName)}
                       </Text>
                     </TouchableOpacity>
                   );

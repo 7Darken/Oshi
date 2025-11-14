@@ -3,18 +3,18 @@
  * Uniquement pour les membres Premium
  */
 
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
-import { Image, Users } from 'lucide-react-native';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRecipeTranslation } from '@/hooks/useI18n';
+import { Image, Users } from 'lucide-react-native';
+import React from 'react';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface ShareOptionsSheetProps {
   visible: boolean;
@@ -103,7 +103,7 @@ export function ShareOptionsSheet({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
   header: {
     paddingHorizontal: Spacing.lg,

@@ -89,7 +89,8 @@
       "placeholder": "https://www.tiktok.com/@...",
       "errors": {
         "empty": "Please enter a valid URL",
-        "invalid": "Invalid URL format"
+        "invalid": "Invalid URL format",
+        "unsupported": "Use TikTok, Instagram Reels, or YouTube Shorts."
       }
     },
     "button": {
@@ -113,6 +114,7 @@
         "title": "Error",
         "message": "Unable to read the clipboard"
       }
-    }
+    },
+    "helpButton": "Help"
   }
 }

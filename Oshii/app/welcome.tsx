@@ -3,23 +3,23 @@
  * Première page de l'app avec options de connexion
  */
 
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { BorderRadius, Colors, Spacing } from '@/constants/theme';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthTranslation, useCommonTranslation } from '@/hooks/useI18n';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Mail } from 'lucide-react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { useAuthTranslation, useCommonTranslation } from '@/hooks/useI18n';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -124,7 +124,7 @@ export default function WelcomeScreen() {
       {/* Logo et nom */}
       <View style={styles.logoSection}>
         <ExpoImage
-          source={require('@/assets/images/imgWelcome.png')}
+          source={require('@/assets/images/imgWelcome3d.png')}
           style={styles.welcomeImage}
           contentFit="contain"
         />
@@ -232,8 +232,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl * 2,
   },
   welcomeImage: {
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 180,
+    shadowColor: 'white',
+    shadowOffset: {
+      width: 3,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   appName: {
     fontSize: 36,

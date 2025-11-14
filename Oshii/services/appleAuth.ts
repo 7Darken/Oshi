@@ -3,12 +3,76 @@
  * Gère la connexion/inscription avec Apple et la récupération des données utilisateur
  */
 
+import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
-import Constants from 'expo-constants';
 
 // Configurer WebBrowser pour gérer correctement les redirects OAuth
 WebBrowser.maybeCompleteAuthSession();
+
+interface OAuthCallbackParams {
+  authCode: string | null;
+  state: string | null;
+  error: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+}
+
+const OAUTH_ERROR_CANCELLED = 'CANCELED';
+
+function getRedirectUrl() {
+  return Constants.expoConfig?.scheme
+    ? `${Constants.expoConfig.scheme}://auth-callback`
+    : 'oshii://auth-callback';
+}
+
+function extractStateParameter(url: string | null): string | null {
+  if (!url) {
+    return null;
+  }
+  try {
+    const parsed = new URL(url);
+    const stateFromQuery = parsed.searchParams.get('state');
+    if (stateFromQuery) {
+      return stateFromQuery;
+    }
+    if (parsed.hash) {
+      const hashParams = new URLSearchParams(parsed.hash.substring(1));
+      return hashParams.get('state');
+    }
+  } catch (error) {
+    console.warn('⚠️ [Apple Auth] Impossible d\'extraire le paramètre state:', error);
+  }
+  return null;
+}
+
+function parseOAuthCallback(callbackUrl: string): OAuthCallbackParams {
+  try {
+    const parsed = new URL(callbackUrl);
+    const hashParams = parsed.hash ? new URLSearchParams(parsed.hash.substring(1)) : null;
+    const getParam = (key: string) =>
+      parsed.searchParams.get(key) ?? hashParams?.get(key) ?? null;
+
+    const error = getParam('error_description') ?? getParam('error');
+
+    return {
+      authCode: getParam('code'),
+      state: getParam('state'),
+      error,
+      accessToken: getParam('access_token'),
+      refreshToken: getParam('refresh_token'),
+    };
+  } catch (error) {
+    console.error('❌ [Apple Auth] Erreur lors du parsing de l\'URL de callback:', error);
+    return {
+      authCode: null,
+      state: null,
+      error: 'invalid_callback_url',
+      accessToken: null,
+      refreshToken: null,
+    };
+  }
+}
 
 /**
  * Interface pour la réponse de l'authentification Apple
@@ -34,23 +98,15 @@ export async function signInWithApple(): Promise<AppleAuthResponse> {
   console.log('🍎 [Apple Auth] Démarrage de l\'authentification Apple OAuth...');
 
   try {
-    // Construire l'URL de redirection vers la route de callback
-    const redirectUrl = Constants.expoConfig?.scheme 
-      ? `${Constants.expoConfig.scheme}://auth-callback`
-      : 'oshii://auth-callback';
+    const redirectUrl = getRedirectUrl();
 
     console.log('🔗 [Apple Auth] Redirect URL:', redirectUrl);
 
-    // Démarrer le flux OAuth avec Apple via Supabase
-    // Supabase utilise automatiquement le provider_id (sub d'Apple) pour identifier l'utilisateur
-    // même si l'email change ou n'est pas partagé, donc le même compte sera réutilisé
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
         redirectTo: redirectUrl,
-        skipBrowserRedirect: false,
-        // Ne pas utiliser prompt: 'consent' car cela force toujours la demande de consentement
-        // Supabase gère automatiquement la réutilisation des comptes via le provider_id
+        skipBrowserRedirect: true,
       },
     });
 
@@ -72,134 +128,25 @@ export async function signInWithApple(): Promise<AppleAuthResponse> {
       };
     }
 
-    // Ouvrir le navigateur pour l'authentification Apple
+    const expectedState = extractStateParameter(data.url);
+
     console.log('🔗 [Apple Auth] Ouverture du navigateur pour l\'authentification...');
     console.log('🔗 [Apple Auth] OAuth URL:', data.url);
-    
-    const result = await WebBrowser.openAuthSessionAsync(
-      data.url,
-      redirectUrl
-    );
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
     console.log('📱 [Apple Auth] Résultat du navigateur:', result.type);
 
-    if (result.type === 'success') {
-      console.log('✅ [Apple Auth] Callback URL reçue:', result.url);
-      
-      // Extraire les tokens depuis l'URL de callback
-      const callbackUrl = result.url;
-      let accessToken: string | null = null;
-      let refreshToken: string | null = null;
-      let type: string | null = null;
-
-      try {
-        // Parser l'URL de callback
-        const url = new URL(callbackUrl);
-        
-        // Chercher dans les query params
-        accessToken = url.searchParams.get('access_token');
-        refreshToken = url.searchParams.get('refresh_token');
-        type = url.searchParams.get('type');
-
-        // Si pas trouvé dans les query params, chercher dans le hash
-        if (!accessToken && url.hash) {
-          const hashParams = new URLSearchParams(url.hash.substring(1));
-          accessToken = hashParams.get('access_token');
-          refreshToken = hashParams.get('refresh_token');
-          type = hashParams.get('type');
-        }
-
-        console.log('🔑 [Apple Auth] Tokens extraits:', {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          type,
-        });
-
-        if (!accessToken || !refreshToken) {
-          console.error('❌ [Apple Auth] Tokens manquants dans l\'URL de callback');
-          return {
-            user: null,
-            session: null,
-            error: { message: 'Tokens non trouvés dans l\'URL de callback' },
-          };
-        }
-
-        // Créer la session avec les tokens
-        console.log('🔐 [Apple Auth] Création de la session avec les tokens...');
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          console.error('❌ [Apple Auth] Erreur lors de la création de la session:', sessionError);
-          return {
-            user: null,
-            session: null,
-            error: sessionError,
-          };
-        }
-
-        if (!sessionData.session || !sessionData.user) {
-          console.error('❌ [Apple Auth] Session ou utilisateur non disponible après setSession');
-          return {
-            user: null,
-            session: null,
-            error: { message: 'Session non créée correctement' },
-          };
-        }
-
-        console.log('✅ [Apple Auth] Session créée avec succès');
-        console.log('👤 [Apple Auth] Utilisateur:', sessionData.user.email);
-        console.log('🆔 [Apple Auth] User ID:', sessionData.user.id);
-        console.log('🔗 [Apple Auth] Identités:', JSON.stringify(sessionData.user.identities, null, 2));
-
-        // Vérifier les identités Apple pour comprendre le compte
-        const appleIdentity = sessionData.user.identities?.find((id: any) => id.provider === 'apple');
-        if (appleIdentity) {
-          console.log('🍎 [Apple Auth] Identité Apple trouvée:', {
-            provider: appleIdentity.provider,
-            provider_id: appleIdentity.id,
-            created_at: appleIdentity.created_at,
-          });
-        }
-
-        // Récupérer les données de profil Apple
-        console.log('📋 [Apple Auth] Extraction des données de profil...');
-        const profileData = await extractAppleProfileData(sessionData.user);
-
-        // Créer ou mettre à jour le profil dans Supabase
-        // Note: Supabase utilise le provider_id (sub d'Apple) pour identifier l'utilisateur
-        // même si l'email change, donc le même compte sera réutilisé
-        console.log('💾 [Apple Auth] Mise à jour du profil...');
-        const needsOnboarding = await updateUserProfile(sessionData.user, profileData);
-
-        console.log('✅ [Apple Auth] Authentification Apple complétée avec succès');
-
-        return {
-          user: sessionData.user,
-          session: sessionData.session,
-          error: null,
-          needsOnboarding,
-          profileData,
-        };
-      } catch (parseError: any) {
-        console.error('❌ [Apple Auth] Erreur lors du parsing de l\'URL:', parseError);
-        console.error('❌ [Apple Auth] URL complète:', callbackUrl);
-        return {
-          user: null,
-          session: null,
-          error: { message: `Erreur de parsing: ${parseError.message}` },
-        };
-      }
-    } else if (result.type === 'cancel') {
+    if (result.type === 'cancel' || result.type === 'dismiss') {
       console.log('ℹ️ [Apple Auth] Authentification annulée par l\'utilisateur');
       return {
         user: null,
         session: null,
-        error: 'CANCELED', // Spécial pour ne pas afficher d'erreur
+        error: OAUTH_ERROR_CANCELLED,
       };
-    } else {
+    }
+
+    if (result.type !== 'success' || !result.url) {
       console.log('⚠️ [Apple Auth] Type de résultat inattendu:', result.type);
       return {
         user: null,
@@ -207,6 +154,121 @@ export async function signInWithApple(): Promise<AppleAuthResponse> {
         error: { message: 'Échec de l\'authentification' },
       };
     }
+
+    console.log('✅ [Apple Auth] Callback URL reçue:', result.url);
+
+    const callbackParams = parseOAuthCallback(result.url);
+
+    if (callbackParams.error) {
+      console.error('❌ [Apple Auth] Erreur retournée par Apple:', callbackParams.error);
+      return {
+        user: null,
+        session: null,
+        error: { message: callbackParams.error },
+      };
+    }
+
+    if (expectedState && callbackParams.state && expectedState !== callbackParams.state) {
+      console.error('❌ [Apple Auth] Mismatch du paramètre state (attaque CSRF potentielle)');
+      return {
+        user: null,
+        session: null,
+        error: { message: 'state_mismatch' },
+      };
+    }
+
+    if (callbackParams.authCode) {
+      console.log('🔐 [Apple Auth] Échange du code d\'autorisation pour une session...');
+      const { data: exchangeData, error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(callbackParams.authCode);
+
+      if (exchangeError) {
+        console.error('❌ [Apple Auth] Erreur lors de l\'échange du code:', exchangeError);
+        return {
+          user: null,
+          session: null,
+          error: exchangeError,
+        };
+      }
+
+      if (!exchangeData?.session || !exchangeData.session.user) {
+        console.error('❌ [Apple Auth] Session non disponible après l\'échange du code');
+        return {
+          user: null,
+          session: null,
+          error: { message: 'session_not_found' },
+        };
+      }
+
+      const user = exchangeData.session.user;
+      console.log('✅ [Apple Auth] Session créée avec succès via PKCE');
+      console.log('👤 [Apple Auth] Utilisateur:', user.email);
+      console.log('🆔 [Apple Auth] User ID:', user.id);
+
+      const appleIdentity = user.identities?.find((id: any) => id.provider === 'apple');
+      if (appleIdentity) {
+        console.log('🍎 [Apple Auth] Identité Apple trouvée:', {
+          provider: appleIdentity.provider,
+          provider_id: appleIdentity.id,
+          created_at: appleIdentity.created_at,
+        });
+      }
+
+      const profileData = await extractAppleProfileData(user);
+      const needsOnboarding = await updateUserProfile(user, profileData);
+
+      return {
+        user,
+        session: exchangeData.session,
+        error: null,
+        needsOnboarding,
+        profileData,
+      };
+    }
+
+    if (callbackParams.accessToken && callbackParams.refreshToken) {
+      console.log('ℹ️ [Apple Auth] PKCE non disponible, fallback sur setSession (non recommandé)');
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: callbackParams.accessToken,
+        refresh_token: callbackParams.refreshToken,
+      });
+
+      if (sessionError) {
+        console.error('❌ [Apple Auth] Erreur lors de la création de la session (fallback):', sessionError);
+        return {
+          user: null,
+          session: null,
+          error: sessionError,
+        };
+      }
+
+      if (!sessionData.session || !sessionData.user) {
+        console.error('❌ [Apple Auth] Session ou utilisateur non disponible après setSession (fallback)');
+        return {
+          user: null,
+          session: null,
+          error: { message: 'session_not_found' },
+        };
+      }
+
+      const profileData = await extractAppleProfileData(sessionData.user);
+      const needsOnboarding = await updateUserProfile(sessionData.user, profileData);
+
+      return {
+        user: sessionData.user,
+        session: sessionData.session,
+        error: null,
+        needsOnboarding,
+        profileData,
+      };
+    }
+
+    console.error('❌ [Apple Auth] Aucun code ou token disponible dans le callback');
+    return {
+      user: null,
+      session: null,
+      error: { message: 'missing_oauth_code' },
+    };
   } catch (error: any) {
     console.error('❌ [Apple Auth] Erreur inattendue:', error);
     return {
@@ -226,12 +288,13 @@ export async function signInWithApple(): Promise<AppleAuthResponse> {
 async function extractAppleProfileData(user: any): Promise<{
   name: string | null;
   email: string | null;
+  avatarUrl: string | null;
 }> {
   try {
     // Les données Apple sont dans user_metadata
     const userMetadata = user.user_metadata || {};
 
-    const name = 
+    const name =
       userMetadata.full_name || 
       userMetadata.name ||
       `${userMetadata.first_name || ''} ${userMetadata.last_name || ''}`.trim() ||
@@ -239,18 +302,21 @@ async function extractAppleProfileData(user: any): Promise<{
       null;
 
     const email = user.email || null;
+    const avatarUrl = userMetadata.picture || userMetadata.avatar_url || null;
 
     console.log('📋 [Apple Auth] Données de profil extraites:', { name, email });
 
     return {
       name,
       email,
+      avatarUrl,
     };
   } catch (error) {
     console.error('❌ [Apple Auth] Erreur lors de l\'extraction du profil:', error);
     return {
       name: null,
       email: null,
+      avatarUrl: null,
     };
   }
 }
@@ -264,7 +330,7 @@ async function extractAppleProfileData(user: any): Promise<{
  */
 async function updateUserProfile(
   user: any,
-  profileData: { name: string | null; email: string | null }
+  profileData: { name: string | null; email: string | null; avatarUrl: string | null }
 ): Promise<boolean> {
   try {
     if (!user?.id) {
@@ -275,7 +341,7 @@ async function updateUserProfile(
     // Vérifier si le profil existe déjà
     const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
-      .select('id, username, onboarding_completed')
+      .select('id, username, onboarding_completed, avatar_url')
       .eq('id', user.id)
       .single();
 
@@ -286,6 +352,7 @@ async function updateUserProfile(
       username?: string;
       onboarding_completed?: boolean;
       profile_type?: null;
+      avatar_url?: string;
     } = {
       id: user.id,
     };
@@ -293,6 +360,11 @@ async function updateUserProfile(
     // Mettre à jour le username si disponible et pas déjà défini
     if (profileData.name && (!existingProfile?.username || existingProfile.username === user.email?.split('@')[0])) {
       profileUpdate.username = profileData.name;
+    }
+
+    // Mettre à jour l'avatar uniquement s'il n'existe pas encore (préserver les avatars personnalisés)
+    if (profileData.avatarUrl && !existingProfile?.avatar_url) {
+      profileUpdate.avatar_url = profileData.avatarUrl;
     }
 
     // Si nouveau profil, définir onboarding_completed à false
