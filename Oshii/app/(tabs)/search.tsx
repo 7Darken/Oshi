@@ -148,8 +148,7 @@ export default function SearchScreen() {
   const previousRecipeIdsRef = useRef<Set<string>>(new Set());
   const previousRecipesRef = useRef<SearchRecipe[]>([]);
   const previousFilterSignatureRef = useRef<string>('');
-  const recentFetchInProgressRef = useRef(false);
-  const recentRecipesRequestedRef = useRef(false);
+  const recentRecipesFetchedRef = useRef(false);
 
   const hasActiveFilters = useMemo(
     () =>
@@ -348,30 +347,39 @@ export default function SearchScreen() {
     hasActiveFilters,
   ]);
 
+  // Stabiliser sharedRecipeIds pour éviter les re-renders inutiles
+  const stableSharedRecipeIds = useMemo(() => sharedRecipeIds, [sharedRecipeIds.join(',')]);
+
+  // Charger les recettes récentes une seule fois quand nécessaire
   useEffect(() => {
-    recentRecipesRequestedRef.current = false;
-    recentFetchInProgressRef.current = false;
-    setRecentRecipes([]);
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!user?.id || !foodItemsReady) return;
-
-    const hasNoSearchInput = selectedFoodItems.length === 0;
-    const hasNoFilters = !hasActiveFilters;
-
-    if (!hasNoSearchInput || !hasNoFilters) {
+    // Reset quand l'utilisateur change
+    if (!user?.id) {
+      if (recentRecipesFetchedRef.current || recentRecipes.length > 0) {
+        recentRecipesFetchedRef.current = false;
+        setRecentRecipes([]);
+        setIsLoadingRecent(false);
+      }
       return;
     }
 
-    if (recentRecipesRequestedRef.current || recentFetchInProgressRef.current) {
+    // Ne charger que si on n'a ni filtres ni recherche active
+    const shouldShowRecent = selectedFoodItems.length === 0 && !hasActiveFilters;
+
+    // Si on ne doit pas montrer les recettes récentes, nettoyer et sortir
+    if (!shouldShowRecent) {
+      if (recentRecipesFetchedRef.current || recentRecipes.length > 0) {
+        setRecentRecipes([]);
+        recentRecipesFetchedRef.current = false;
+      }
       return;
     }
 
-    let isActive = true;
+    // Ne rien faire si pas prêt ou déjà chargé
+    if (!foodItemsReady || recentRecipesFetchedRef.current) {
+      return;
+    }
 
     const fetchRecentRecipes = async () => {
-      recentFetchInProgressRef.current = true;
       setIsLoadingRecent(true);
 
       try {
@@ -381,48 +389,36 @@ export default function SearchScreen() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        // Exclure les recettes partagées
-        if (sharedRecipeIds.length > 0) {
-          query = query.not('id', 'in', `(${sharedRecipeIds.join(',')})`);
+        // Exclure les recettes partagées si nécessaire
+        if (stableSharedRecipeIds.length > 0) {
+          query = query.not('id', 'in', `(${stableSharedRecipeIds.join(',')})`);
         }
 
         const { data, error } = await query.limit(4);
 
-        if (!isActive) {
-          return;
-        }
-
         if (error) {
           console.error('❌ Erreur lors de la récupération des recettes récentes:', error);
+          setRecentRecipes([]);
           return;
         }
 
         setRecentRecipes((data ?? []) as SearchRecipe[]);
-        recentRecipesRequestedRef.current = true;
+        recentRecipesFetchedRef.current = true;
       } catch (error) {
-        if (!isActive) {
-          return;
-        }
         console.error('❌ Erreur inattendue lors de la récupération des recettes récentes:', error);
+        setRecentRecipes([]);
       } finally {
-        recentFetchInProgressRef.current = false;
-        if (isActive) {
-          setIsLoadingRecent(false);
-        }
+        setIsLoadingRecent(false);
       }
     };
 
     fetchRecentRecipes();
-
-    return () => {
-      isActive = false;
-    };
   }, [
     user?.id,
     foodItemsReady,
     hasActiveFilters,
     selectedFoodItems.length,
-    sharedRecipeIds,
+    stableSharedRecipeIds,
   ]);
 
   const handleRecipePress = useCallback((recipeId: string) => {
@@ -468,21 +464,13 @@ export default function SearchScreen() {
     setSelectedCuisineOrigins([]);
   }, []);
 
-  const activeFilterTagColors = useMemo(() => {
-    const theme = Colors[colorScheme ?? 'light'];
-    const isDarkMode = (colorScheme ?? 'light') === 'dark';
-
-    return {
-      background: isDarkMode ? theme.card : theme.secondary,
-      border: theme.border,
-      text: theme.text,
-    };
-  }, [colorScheme]);
-
   const shouldShowRecentRecipes = selectedFoodItems.length === 0 && !hasActiveFilters;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
         <View style={styles.content}>
           {/* Header */}

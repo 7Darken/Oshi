@@ -3,7 +3,7 @@
  * Design minimaliste avec email/mot de passe
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -32,11 +32,19 @@ export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signIn, signInWithGoogle, signInWithApple, isLoading } = useAuthContext();
+  const { signIn, signInWithGoogle, signInWithApple, isLoading, isAuthenticated } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const { t } = useAuthTranslation();
   const { t: tCommon } = useCommonTranslation();
+
+  // Rediriger vers la home si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      console.log('🔄 [Login] Utilisateur déjà connecté, redirection vers /(tabs)');
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

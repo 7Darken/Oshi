@@ -2,8 +2,10 @@ import { OshiiLogo } from '@/components/ui/OshiiLogo';
 import { ProfileTypeIcon } from '@/components/ui/ProfileTypeIcon';
 import { CUISINE_ORIGINS, DIET_TYPES_CONFIG } from '@/constants/recipeCategories';
 import { BorderRadius, Spacing } from '@/constants/theme';
+import { useI18n } from '@/hooks/useI18n';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { User } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef } from 'react';
 import {
@@ -215,13 +217,33 @@ const PLATFORM_LOGOS: Record<string, any> = {
   youtube: require('@/assets/logo/YoutubeLogo.png'),
 };
 
-const dietIconMap = new Map(
-  DIET_TYPES_CONFIG.map((diet) => [diet.value.toLowerCase(), diet.icon]),
-);
+// Map pour les icônes de diet avec support FR et EN
+const dietIconMap = new Map();
+DIET_TYPES_CONFIG.forEach((diet) => {
+  dietIconMap.set(diet.value.toLowerCase(), diet.icon);
+  dietIconMap.set(diet.value_en.toLowerCase(), diet.icon);
+});
 
 const cuisineFlagMap = new Map(
   CUISINE_ORIGINS.map((cuisine) => [cuisine.value.toLowerCase(), cuisine.flag]),
 );
+
+// Fonction pour traduire un diet type en fonction de la langue
+const translateDietType = (diet: string, language: string): string => {
+  const normalizedDiet = diet.toLowerCase().trim();
+
+  // Chercher dans DIET_TYPES_CONFIG
+  const dietConfig = DIET_TYPES_CONFIG.find(
+    (d) => d.value.toLowerCase() === normalizedDiet || d.value_en.toLowerCase() === normalizedDiet
+  );
+
+  if (dietConfig) {
+    return language === 'en' ? dietConfig.label_en : dietConfig.label;
+  }
+
+  // Si pas trouvé, retourner tel quel avec capitalisation
+  return diet.charAt(0).toUpperCase() + diet.slice(1);
+};
 
 const TemplateContent: React.FC<TemplateContentProps> = ({
   avatarUrl,
@@ -237,12 +259,29 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
   totalCookingTime,
   shareMessage,
 }) => {
+  const { language } = useI18n();
+
   const cuisineFlag = favoriteCuisine
     ? cuisineFlagMap.get(favoriteCuisine.toLowerCase())
     : undefined;
 
+  // Traduire les diet tags en fonction de la langue
+  const translatedDietTags = useMemo(
+    () => dietTags.map((diet) => translateDietType(diet, language)),
+    [dietTags, language]
+  );
+
   return (
     <View style={[styles.template, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      {/* Halo de lumière */}
+      <LinearGradient
+        colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.08)', 'rgba(21,23,24,0)']}
+        locations={[0, 0.45, 1]}
+        start={{ x: 0.5, y: 0.05 }}
+        end={{ x: 0.5, y: 0.95 }}
+        style={styles.haloGlow}
+        pointerEvents="none"
+      />
       <View style={styles.templateHeader}>
         <View style={styles.templateAvatarWrapper}>
           {avatarUrl ? (
@@ -312,21 +351,25 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
             {t('profile.platformStats.dietsTitle')}
           </Text>
           <View style={styles.dietTagsWrapper}>
-            {dietTags.length === 0 ? (
+            {translatedDietTags.length === 0 ? (
               <Text style={[styles.templateLegendEmpty, { color: colors.icon }]}>
                 {t('profile.platformStats.noDiets')}
               </Text>
             ) : (
-              dietTags.map((diet: string) => (
-                <View key={diet} style={[styles.dietTag, { borderColor: colors.border }]}>
-                  {dietIconMap.has(diet.toLowerCase()) && (
-                    <ExpoImage source={dietIconMap.get(diet.toLowerCase())!} style={styles.dietTagIcon} />
-                  )}
-                  <Text style={[styles.dietTagText, { color: colors.text }]} numberOfLines={1}>
-                    {diet}
-                  </Text>
-                </View>
-              ))
+              translatedDietTags.map((diet: string, index: number) => {
+                // Utiliser le diet original pour l'icône
+                const originalDiet = dietTags[index];
+                return (
+                  <View key={`${diet}-${index}`} style={[styles.dietTag, { borderColor: colors.border }]}>
+                    {dietIconMap.has(originalDiet.toLowerCase()) && (
+                      <ExpoImage source={dietIconMap.get(originalDiet.toLowerCase())!} style={styles.dietTagIcon} />
+                    )}
+                    <Text style={[styles.dietTagText, { color: colors.text }]} numberOfLines={1}>
+                      {diet}
+                    </Text>
+                  </View>
+                );
+              })
             )}
           </View>
         </View>
@@ -428,6 +471,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: TEMPLATE_PADDING,
     gap: Spacing.md,
+    overflow: 'hidden',
+  },
+  haloGlow: {
+    position: 'absolute',
+    width: TEMPLATE_WIDTH * 1.3,
+    height: TEMPLATE_WIDTH * 1.3,
+    top: -TEMPLATE_WIDTH * 0.5,
+    alignSelf: 'center',
+    borderRadius: TEMPLATE_WIDTH * 1.3,
+    opacity: 0.6,
+    transform: [{ rotate: '-8deg' }],
   },
   templateHeader: {
     alignItems: 'center',

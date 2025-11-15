@@ -5,8 +5,8 @@
 import { Button } from '@/components/ui/Button';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useI18n, useShoppingTranslation } from '@/hooks/useI18n';
 import { useFoodItems } from '@/hooks/useFoodItems';
+import { useI18n, useShoppingTranslation } from '@/hooks/useI18n';
 import { FoodItem } from '@/stores/useFoodItemsStore';
 import { Image as ExpoImage } from 'expo-image';
 import { Check, X } from 'lucide-react-native';
@@ -64,10 +64,10 @@ export function AddFoodItemsSheet({
     return searchFoodItems(searchQuery);
   }, [foodItems, searchQuery, searchFoodItems]);
 
-  // Grouper les food_items par catégorie
+  // Grouper les food_items par catégorie et trier
   const groupedByCategory = useMemo(() => {
     const groups: Record<string, FoodItem[]> = {};
-    
+
     filteredFoodItems.forEach((item) => {
       const category = item.category || t('shopping.addSheet.otherCategory');
       if (!groups[category]) {
@@ -76,9 +76,18 @@ export function AddFoodItemsSheet({
       groups[category].push(item);
     });
 
+    // Trier chaque catégorie par nom d'ingrédient
+    Object.keys(groups).forEach((category) => {
+      groups[category].sort((a, b) => {
+        const nameA = language === 'en' && a.name_en ? a.name_en : a.name;
+        const nameB = language === 'en' && b.name_en ? b.name_en : b.name;
+        return nameA.localeCompare(nameB);
+      });
+    });
+
     // Trier les catégories alphabétiquement
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredFoodItems, t]);
+  }, [filteredFoodItems, t, language]);
 
   const toggleFoodItem = (foodItemId: string) => {
     const newSelected = new Set(selectedFoodItemIds);
@@ -158,51 +167,55 @@ export function AddFoodItemsSheet({
                 </Text>
                 
                 {/* Items de la catégorie */}
-                {items.map((foodItem) => {
-                  const isSelected = selectedFoodItemIds.has(foodItem.id);
-                  const displayName =
-                    language === 'en' && foodItem.name_en ? foodItem.name_en : foodItem.name;
+                <View style={styles.categoryItemsContainer}>
+                  {items.map((foodItem) => {
+                    const isSelected = selectedFoodItemIds.has(foodItem.id);
+                    const displayName =
+                      language === 'en' && foodItem.name_en ? foodItem.name_en : foodItem.name;
 
-                  return (
-                    <TouchableOpacity
-                      key={foodItem.id}
-                      style={[
-                        styles.foodItemCard,
-                        { backgroundColor: colors.card, borderColor: colors.border },
-                        isSelected && { borderColor: colors.primary, borderWidth: 2 },
-                      ]}
-                      onPress={() => toggleFoodItem(foodItem.id)}
-                      activeOpacity={0.7}
-                    >
-                      {/* Checkbox */}
-                      <View
+                    return (
+                      <TouchableOpacity
+                        key={foodItem.id}
                         style={[
-                          styles.checkbox,
-                          { borderColor: colors.border },
-                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                          styles.foodItemCard,
+                          {
+                            backgroundColor: isSelected ? `${colors.primary}10` : colors.card,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                          },
                         ]}
+                        onPress={() => toggleFoodItem(foodItem.id)}
+                        activeOpacity={0.7}
                       >
-                        {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-                      </View>
+                        {/* Checkbox en haut à droite */}
+                        <View
+                          style={[
+                            styles.checkbox,
+                            { borderColor: colors.border, backgroundColor: colors.card },
+                            isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                          ]}
+                        >
+                          {isSelected && <Check size={10} color="#FFFFFF" strokeWidth={2.5} />}
+                        </View>
 
-                      {/* Image */}
-                      {foodItem.image_url ? (
-                        <ExpoImage
-                          source={{ uri: foodItem.image_url }}
-                          style={styles.foodItemImage}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View style={[styles.foodItemImagePlaceholder, { backgroundColor: colors.secondary }]} />
-                      )}
+                        {/* Image */}
+                        {foodItem.image_url ? (
+                          <ExpoImage
+                            source={{ uri: foodItem.image_url }}
+                            style={styles.foodItemImage}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <View style={[styles.foodItemImagePlaceholder, { backgroundColor: colors.secondary }]} />
+                        )}
 
-                      {/* Name */}
-                      <Text style={[styles.foodItemName, { color: colors.text }]} numberOfLines={2}>
-                        {capitalizeName(displayName)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        {/* Name */}
+                        <Text style={[styles.foodItemName, { color: colors.text }]} numberOfLines={2}>
+                          {capitalizeName(displayName)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             ))
           )}
@@ -268,50 +281,69 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
   },
-  foodItemCard: {
+  categoryItemsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  foodItemCard: {
+    flexDirection: 'column',
     alignItems: 'center',
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1.5,
+    width: '31.5%',
+    aspectRatio: 0.85,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    justifyContent: 'center',
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 2,
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.sm,
   },
   foodItemImage: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.sm,
-    marginRight: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   foodItemImagePlaceholder: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.sm,
-    marginRight: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   foodItemName: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 11,
     fontWeight: '500',
+    lineHeight: 14,
+    textAlign: 'center',
+    width: '100%',
+    paddingHorizontal: 2,
   },
   categorySection: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   categoryTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    opacity: 0.7,
+    letterSpacing: 1,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
+    opacity: 0.6,
   },
   emptyContainer: {
     alignItems: 'center',

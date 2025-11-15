@@ -83,17 +83,17 @@ export function RecipeAnalyzeSkeleton({
     outputRange: [0.3, 0.6, 0.3],
   });
 
-  const activeStageIndex = STAGES.indexOf(stage);
-  const progressAnim = useRef(new Animated.Value(activeStageIndex + 1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Animation automatique sur 45 secondes pour remplir toute la barre
     Animated.timing(progressAnim, {
-      toValue: activeStageIndex + 1,
-      duration: 1000,
-      easing: Easing.out(Easing.quad),
+      toValue: STAGES.length,
+      duration: 45000, // 45 secondes au total
+      easing: Easing.linear,
       useNativeDriver: false,
     }).start();
-  }, [activeStageIndex, progressAnim]);
+  }, [progressAnim]);
 
   const renderShimmer = (width: string | number = '100%') => {
     return (
@@ -120,19 +120,6 @@ export function RecipeAnalyzeSkeleton({
       accessible
       accessibilityLabel={t('recipe.analysis.skeleton.analyzingMessage')}
     >
-      {/* En-tête */}
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <OshiiLogo size="lg" />
-        </View>
-        <Text style={[styles.title, { color: colors.text }]}>
-          {t('recipe.analysis.skeleton.analyzingMessage')}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.icon }]}>
-          {getSubtitle()}
-        </Text>
-      </View>
-
       {/* Thumbnail placeholder circulaire */}
       <View style={styles.thumbnailContainer}>
         <Animated.View
@@ -259,6 +246,19 @@ export function RecipeAnalyzeSkeleton({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* En-tête centré par-dessus tout */}
+      <View style={styles.headerOverlay}>
+        <View style={styles.iconContainer}>
+          <OshiiLogo size="lg" />
+        </View>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('recipe.analysis.skeleton.analyzingMessage')}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.icon }]}>
+          {getSubtitle()}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -269,9 +269,16 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingTop: Spacing.xxl,
   },
-  header: {
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    justifyContent: 'center',
+    zIndex: 10,
+    pointerEvents: 'none',
   },
   iconContainer: {
     width: 64,

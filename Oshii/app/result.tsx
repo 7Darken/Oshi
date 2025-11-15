@@ -670,7 +670,15 @@ export default function ResultScreen() {
   };
 
   const handleBack = () => {
-    router.back();
+    // Vérifier si la recette n'a pas de dossier
+    const recipe = dbRecipe || currentRecipe;
+    if (recipe && !recipe.folder_id) {
+      // Afficher le modal de sélection de dossier
+      setShowFolderSelector(true);
+    } else {
+      // Sinon, revenir normalement
+      router.back();
+    }
   };
 
   const handleDeleteRecipe = async () => {
@@ -720,6 +728,7 @@ export default function ResultScreen() {
     if (!params.recipeId) {
       console.log('⚠️ [Result] Pas de recipeId, impossible de modifier le dossier');
       setShowFolderSelector(false);
+      router.back();
       return;
     }
 
@@ -754,6 +763,30 @@ export default function ResultScreen() {
       }
 
       setShowFolderSelector(false);
+
+      // Réinitialiser la stack de navigation pour que le retour depuis le dossier amène à la home
+      if (folderId) {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: '(tabs)' as any },
+              { name: 'folder' as any, params: { folderId } },
+            ],
+          })
+        );
+      } else {
+        // Si aucun dossier (null), aller vers les recettes non enregistrées
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: '(tabs)' as any },
+              { name: 'folder' as any, params: { folderId: 'null' } },
+            ],
+          })
+        );
+      }
     } catch (err: any) {
       console.error('❌ [Result] Erreur:', err);
     } finally {
@@ -1280,7 +1313,11 @@ export default function ResultScreen() {
       {/* Sheet de sélection de dossier */}
       <FolderSelectorSheet
         visible={showFolderSelector}
-        onClose={() => setShowFolderSelector(false)}
+        onClose={() => {
+          setShowFolderSelector(false);
+          // Revenir en arrière même si on ferme sans sélectionner
+          router.back();
+        }}
         currentFolderId={currentFolder?.id || null}
         onSelectFolder={handleSelectFolder}
         isUpdating={isUpdatingFolder}

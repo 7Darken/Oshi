@@ -3,7 +3,7 @@
  * Design minimaliste avec email/mot de passe
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -31,8 +31,16 @@ export default function RegisterScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signUp, isLoading } = useAuthContext();
+  const { signUp, isLoading, isAuthenticated } = useAuthContext();
   const { t } = useAuthTranslation();
+
+  // Rediriger vers la home si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      console.log('🔄 [Register] Utilisateur déjà connecté, redirection vers /(tabs)');
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

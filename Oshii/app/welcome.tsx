@@ -12,7 +12,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Mail } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,11 +27,19 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signInWithGoogle, signInWithApple } = useAuthContext();
+  const { signInWithGoogle, signInWithApple, isAuthenticated, isLoading } = useAuthContext();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const { t } = useAuthTranslation();
   const { t: tCommon } = useCommonTranslation();
+
+  // Rediriger vers la home si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      console.log('🔄 [Welcome] Utilisateur déjà connecté, redirection vers /(tabs)');
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const isDark = colorScheme === 'dark';
   const primaryGradient = useMemo(

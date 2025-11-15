@@ -2,7 +2,7 @@
  * Hook pour récupérer les IDs des recettes partagées avec l'utilisateur
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/services/supabase';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useNetworkContext } from '@/contexts/NetworkContext';
@@ -24,6 +24,7 @@ export function useSharedRecipeIds(): UseSharedRecipeIdsReturn {
   const [sharedRecipeIds, setSharedRecipeIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previousIdsRef = useRef<string>('');
 
   const fetchSharedRecipeIds = useCallback(async () => {
     if (!user?.id || isOffline) {
@@ -45,7 +46,13 @@ export function useSharedRecipeIds(): UseSharedRecipeIdsReturn {
       }
 
       const ids = data?.map(sr => sr.recipe_id) || [];
-      setSharedRecipeIds(ids);
+      const idsSignature = ids.sort().join(',');
+
+      // Ne mettre à jour que si les IDs ont vraiment changé
+      if (idsSignature !== previousIdsRef.current) {
+        setSharedRecipeIds(ids);
+        previousIdsRef.current = idsSignature;
+      }
     } catch (err: any) {
       console.error('❌ [SharedRecipeIds] Erreur:', err);
       setError(err.message || 'Une erreur est survenue');

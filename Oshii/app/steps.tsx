@@ -128,6 +128,108 @@ export default function StepsScreen() {
       .trim();
   }, []);
 
+  // Fonction optimisée pour mettre en évidence les ingrédients dans le texte
+  const highlightIngredients = useCallback(
+    (text: string, ingredients: Ingredient[]) => {
+      if (!text || !ingredients || ingredients.length === 0) {
+        return <Text style={[styles.stepText, { color: colors.text }]}>{text}</Text>;
+      }
+
+      // Set pour stocker tous les mots à rechercher (évite les doublons)
+      const wordsToHighlight = new Set<string>();
+
+      ingredients.forEach((ing) => {
+        const normalized = normalizeIngredientName(ing.name);
+
+        // Ajouter le nom complet
+        wordsToHighlight.add(normalized);
+
+        // Ajouter les variantes pluriel/singulier du nom complet
+        if (normalized.endsWith('s')) {
+          wordsToHighlight.add(normalized.slice(0, -1));
+        } else {
+          wordsToHighlight.add(normalized + 's');
+        }
+
+        // Décomposer en mots individuels pour les ingrédients composés
+        // Ex: "levure chimique" -> ["levure", "chimique"]
+        const words = normalized.split(/\s+/).filter(word => word.length > 2); // Ignorer les mots trop courts (de, le, la, etc.)
+        words.forEach(word => {
+          wordsToHighlight.add(word);
+
+          // Ajouter les variantes pluriel/singulier de chaque mot
+          if (word.endsWith('s')) {
+            wordsToHighlight.add(word.slice(0, -1));
+          } else {
+            wordsToHighlight.add(word + 's');
+          }
+        });
+      });
+
+      // Convertir en array et trier par longueur décroissante
+      const wordsArray = Array.from(wordsToHighlight)
+        .sort((a, b) => b.length - a.length);
+
+      if (wordsArray.length === 0) {
+        return <Text style={[styles.stepText, { color: colors.text }]}>{text}</Text>;
+      }
+
+      // Créer la regex avec word boundaries
+      const regex = new RegExp(
+        `\\b(${wordsArray.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`,
+        'gi'
+      );
+
+      const parts: React.ReactNode[] = [];
+      let lastIndex = 0;
+      const normalizedText = normalizeIngredientName(text);
+      let match: RegExpExecArray | null;
+
+      // Trouver toutes les correspondances
+      while ((match = regex.exec(normalizedText)) !== null) {
+        const matchStart = match.index;
+        const matchEnd = matchStart + match[0].length;
+
+        // Ajouter le texte avant la correspondance
+        if (matchStart > lastIndex) {
+          parts.push(
+            <Text key={`text-${lastIndex}`}>
+              {text.substring(lastIndex, matchStart)}
+            </Text>
+          );
+        }
+
+        // Ajouter l'ingrédient en rouge et gras
+        parts.push(
+          <Text
+            key={`ingredient-${matchStart}`}
+            style={{ color: colors.primary, fontWeight: '700' }}
+          >
+            {text.substring(matchStart, matchEnd)}
+          </Text>
+        );
+
+        lastIndex = matchEnd;
+      }
+
+      // Ajouter le texte restant
+      if (lastIndex < text.length) {
+        parts.push(
+          <Text key={`text-${lastIndex}`}>
+            {text.substring(lastIndex)}
+          </Text>
+        );
+      }
+
+      return (
+        <Text style={[styles.stepText, { color: colors.text }]}>
+          {parts.length > 0 ? parts : text}
+        </Text>
+      );
+    },
+    [colors, normalizeIngredientName]
+  );
+
   // Matcher les ingrédients utilisés avec les ingrédients de la recette
   const matchIngredients = useCallback(
     (ingredientNames: string[], allIngredients: Ingredient[]): Ingredient[] => {
@@ -327,9 +429,7 @@ export default function StepsScreen() {
 
           {/* Description */}
           <View style={styles.descriptionContainer}>
-            <Text style={[styles.stepText, { color: colors.text }]}>
-              {item.text}
-            </Text>
+            {highlightIngredients(item.text, recipe?.ingredients || [])}
           </View>
 
           {/* Métadonnées (durée, température) */}
@@ -460,7 +560,7 @@ export default function StepsScreen() {
         </View>
       );
     },
-    [sortedStepsWithIngredients.length, colors, scrollToNextStep, getFoodItemImage, colorScheme, t]
+    [sortedStepsWithIngredients.length, colors, scrollToNextStep, getFoodItemImage, colorScheme, t, highlightIngredients, recipe?.ingredients]
   );
 
   const getItemLayout = useCallback(

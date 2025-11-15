@@ -18,11 +18,12 @@ import { useProfileTranslation } from '@/hooks/useI18n';
 import { getUserStats } from '@/services/api';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Camera, ChevronRight, MoreHorizontal, Settings, Star, User } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const capitalizeFirstLetter = (value: string) =>
   !value ? value : value.charAt(0).toUpperCase() + value.slice(1);
@@ -265,33 +266,27 @@ export default function ProfileScreen() {
   );
 
   const showStatsLocked = totalRecipesCount < 3;
-  const shareButtonPulse = useRef(new Animated.Value(0)).current;
+  const shareButtonShimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (showStatsLocked) {
-      shareButtonPulse.stopAnimation();
-      shareButtonPulse.setValue(0);
+      shareButtonShimmer.stopAnimation();
+      shareButtonShimmer.setValue(0);
       return;
     }
 
     const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shareButtonPulse, {
-          toValue: 1,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shareButtonPulse, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(shareButtonShimmer, {
+        toValue: 1,
+        duration: 2500,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+        useNativeDriver: true,
+      }),
     );
 
     animation.start();
     return () => animation.stop();
-  }, [shareButtonPulse, showStatsLocked]);
+  }, [shareButtonShimmer, showStatsLocked]);
 
   return (
     <ScrollView
@@ -408,19 +403,37 @@ export default function ProfileScreen() {
                 <Animated.View
                   pointerEvents="none"
                   style={[
-                    styles.shareButtonShimmer,
+                    styles.shareButtonShimmerContainer,
                     {
+                      opacity: shareButtonShimmer.interpolate({
+                        inputRange: [0, 0.4, 0.6, 1],
+                        outputRange: [0.2, 1, 1, 0.2],
+                      }),
                       transform: [
                         {
-                          translateX: shareButtonPulse.interpolate({
+                          translateX: shareButtonShimmer.interpolate({
                             inputRange: [0, 1],
-                            outputRange: [-120, 120],
+                            outputRange: [-100, 120],
                           }),
                         },
                       ],
                     },
                   ]}
-                />
+                >
+                  <LinearGradient
+                    colors={[
+                      'rgba(239, 68, 68, 0)',
+                      colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                      colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)',
+                      colorScheme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                      'rgba(239, 68, 68, 0)',
+                    ]}
+                    locations={[0, 0.3, 0.5, 0.7, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.shareButtonShimmer}
+                  />
+                </Animated.View>
               )}
             </View>
           </View>
@@ -703,16 +716,19 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     overflow: 'hidden',
   },
-  shareButtonShimmer: {
+  shareButtonShimmerContainer: {
     position: 'absolute',
     top: -6,
     bottom: -6,
-    width: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.13)',
-    borderRadius: BorderRadius.full,
+    left: -20,
+    right: -20,
+    width: 60,
+  },
+  shareButtonShimmer: {
+    flex: 1,
     shadowColor: '#ef4444',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
   },
   platformLegend: {

@@ -7,7 +7,7 @@ import { SYSTEM_FOLDERS, SYSTEM_FOLDER_NAMES } from '@/constants/systemFolders';
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFolderRecipes } from '@/hooks/useFolderRecipes';
-import { useFoldersTranslation } from '@/hooks/useI18n';
+import { useCommonTranslation, useFoldersTranslation } from '@/hooks/useI18n';
 import { supabase } from '@/services/supabase';
 import { Image as ExpoImage } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,6 +34,7 @@ export default function FolderScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { t } = useFoldersTranslation();
+  const { t: tCommon } = useCommonTranslation();
 
   const rawFolderId = params.folderId;
   const isSystemFolderReceived = rawFolderId === SYSTEM_FOLDERS.RECEIVED;
@@ -119,18 +120,6 @@ export default function FolderScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return "Aujourd'hui";
-    if (days === 1) return "Hier";
-    if (days < 7) return `Il y a ${days} jours`;
-    return date.toLocaleDateString('fr-FR');
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -166,7 +155,7 @@ export default function FolderScreen() {
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.icon }]}>
-              {t('common.loading')}
+              {tCommon('common.loading')}
             </Text>
           </View>
         ) : error ? (

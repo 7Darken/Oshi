@@ -304,8 +304,10 @@ export function RecipeFilterSheet({
             </View>
             <View style={styles.cuisineGrid}>
               {CUISINE_ORIGINS.map((option) => {
+                const displayLabel = language === 'en' && option.label_en ? option.label_en : option.label;
+
                 return renderCuisineCard(
-                  option.label,
+                  displayLabel,
                   option.flag,
                   selectedCuisineOrigins.includes(option.value),
                   () => onToggleCuisineOrigin(option.value),
